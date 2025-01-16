@@ -1,0 +1,36 @@
+version: "3"
+
+vars:
+  gobin: go
+  ldflags: "-extldflags '-static' -w -s -buildid="
+  gcflags: "all=-trimpath={{.PWD}} -dwarf=false -l"
+  asmflags: "all=-trimpath={{.PWD}}"
+  bin: "{{.PWD}}/bin"
+  app: "tun2socksme"
+  app_bin: "{{.bin}}/{{.app}}"
+
+env:
+  CGO_ENABLED: 0
+  GOARCH: amd64
+  GOOS: linux
+
+tasks:
+  default:
+    desc: Show help
+    cmds:
+      - echo $PATH
+      - task --list
+
+  setup:
+    desc: Set up the environment
+    cmds:
+      - mkdir -p {{.bin}}
+
+  build:
+    desc: Build application
+    deps: [setup]
+    cmds:
+      - |
+        {{.gobin}} build -ldflags="{{.ldflags}}" -trimpath -gcflags="{{.gcflags}}" -asmflags="{{.asmflags}}" \
+          -o {{.app_bin}} cmd/{{.app}}/main.go
+        sudo {{.app_bin}} -config config.override.yaml
