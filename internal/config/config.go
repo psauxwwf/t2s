@@ -15,6 +15,7 @@ type Config struct {
 	Host        string   `yaml:"host" env-description:"ip address or hostname remote proxy" env-default:"127.0.0.1"`
 	Port        int      `yaml:"port" env-description:"socks5 port remote proxy" env-default:"1080"`
 	ExcludeNets []string `yaml:"exclude" env-description:"not routing to proxy this nets" env-default:"10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16"`
+	Metric      int      `yaml:"metric" env-description:"metric priority in route" env-default:"512"`
 }
 
 func (c Config) String() string {
@@ -23,12 +24,14 @@ username: %s
 host: %s
 port: %d
 exclude: %s
+metric: %d
 `,
 		c.Device,
 		c.Username,
 		c.Host,
 		c.Port,
 		strings.Join(c.ExcludeNets, " "),
+		c.Metric,
 	)
 }
 
@@ -40,6 +43,7 @@ func New(filename string) (*Config, error) {
 		ExcludeNets: []string{
 			"10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16",
 		},
+		Metric: 512,
 	}
 	if err := cleanenv.ReadConfig(filename, &_config); err != nil {
 		if !os.IsNotExist(err) {

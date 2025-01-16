@@ -8,6 +8,8 @@ import (
 
 type Tun struct {
 	engine *engine.Key
+	Host   string
+	Device string
 }
 
 func New(
@@ -24,6 +26,8 @@ func New(
 				port,
 			),
 		},
+		Host:   host,
+		Device: device,
 	}
 }
 

@@ -6,6 +6,7 @@ import (
 	"log"
 	"tun2socksme/internal/config"
 	"tun2socksme/internal/tun"
+	"tun2socksme/internal/tun2socksme"
 )
 
 var (
@@ -26,7 +27,13 @@ func main() {
 		_config.Username, _config.Password, _config.Host,
 		_config.Port,
 	)
-	if err := _tun.Run(); err != nil {
+
+	_tun2socksme := tun2socksme.New(
+		_tun,
+		_config.ExcludeNets,
+		_config.Metric,
+	)
+	if err := _tun2socksme.Run(); err != nil {
 		log.Fatalln(err)
 	}
 	select {}
