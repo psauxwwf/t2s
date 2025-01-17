@@ -2,7 +2,9 @@ package tun
 
 import (
 	"fmt"
+	"net"
 
+	"github.com/xjasonlyu/tun2socks/v2/dialer"
 	"github.com/xjasonlyu/tun2socks/v2/engine"
 )
 
@@ -16,8 +18,8 @@ func New(
 	device string,
 	username, password, host string,
 	port int,
-) Tun {
-	return Tun{
+) *Tun {
+	return &Tun{
 		engine: &engine.Key{
 			Device:   fmt.Sprintf("tun://%s", device),
 			LogLevel: "silent",
@@ -32,6 +34,8 @@ func New(
 }
 
 func (t Tun) Run() error {
+	net.DefaultResolver.PreferGo = true
+	net.DefaultResolver.Dial = dialer.DialContext
 	engine.Insert(t.engine)
 	if err := engine.Start(); err != nil {
 		return fmt.Errorf("fatal error in interface engine: %w", err)

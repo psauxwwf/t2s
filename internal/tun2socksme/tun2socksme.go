@@ -5,6 +5,7 @@ import (
 	"log"
 	"strconv"
 	"strings"
+	"tun2socksme/internal/dns"
 	"tun2socksme/internal/tun"
 	shell "tun2socksme/pkg"
 )
@@ -15,19 +16,22 @@ type Gateway struct {
 }
 
 type Tun2socksme struct {
-	tun         tun.Tun
+	tun         *tun.Tun
+	dns         *dns.Dns
 	defgate     *Gateway
 	excludenets []string
 	metric      int
 }
 
 func New(
-	_tun tun.Tun,
+	_tun *tun.Tun,
+	_dns *dns.Dns,
 	_excludenets []string,
 	_metric int,
 ) Tun2socksme {
 	return Tun2socksme{
 		tun:         _tun,
+		dns:         _dns,
 		excludenets: _excludenets,
 		metric:      _metric,
 	}
@@ -37,9 +41,23 @@ func (t *Tun2socksme) Run() error {
 	if err := t.tun.Run(); err != nil {
 		return fmt.Errorf("run tun2socks error: %w", err)
 	}
-	// t.deleteRoutes()
+	if err := t.Prepare(); err != nil {
+		return err
+	}
+	go func() {
+		if err := t.dns.Listen(); err != nil {
+			log.Fatalln("dns fatal error: %w", err)
+		}
+	}()
+	return nil
+}
+
+func (t *Tun2socksme) Prepare() error {
 	if err := t.setDefGate(); err != nil {
 		return fmt.Errorf("gateway error: %w", err)
+	}
+	if err := t.disableRP(); err != nil {
+		return fmt.Errorf("rp error: %w", err)
 	}
 	if err := t.setExcludeNets(); err != nil {
 		return fmt.Errorf("route error: %w", err)
@@ -91,7 +109,7 @@ func (t *Tun2socksme) setDefGateToTun() error {
 	if _, err := shell.New("ip", "link", "set", t.tun.Device, "up").Run(); err != nil {
 		return fmt.Errorf("failed to up %s device: %w", t.tun.Device, err)
 	}
-	if _, err := shell.New("ip", "route", "add", "default", "dev", t.tun.Device, "metric", fmt.Sprint(t.metric)).Run(); err != nil {
+	if _, err := shell.New("ip", "route", "add", "default", "dev", t.tun.Device, "proto", "static", "metric", fmt.Sprint(t.metric)).Run(); err != nil {
 		return fmt.Errorf("failed to set default route via %s: %w", t.tun.Device, err)
 	}
 	return nil
@@ -108,6 +126,17 @@ func (t *Tun2socksme) deleteRoutes() error {
 		}
 	}
 	return err
+}
+
+func (t *Tun2socksme) disableRP() error {
+
+	if _, err := shell.New("sysctl", "net.ipv4.conf.all.rp_filter=0").Run(); err != nil {
+		return fmt.Errorf("failed disable rp: %w", err)
+	}
+	if _, err := shell.New("sysctl", fmt.Sprintf("net.ipv4.conf.%s.rp_filter=0", t.defgate.device)).Run(); err != nil {
+		return fmt.Errorf("failed disable rp: %w", err)
+	}
+	return nil
 }
 
 func (t *Tun2socksme) Shutdown() {

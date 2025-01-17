@@ -8,6 +8,7 @@ import (
 	"os/signal"
 	"syscall"
 	"tun2socksme/internal/config"
+	"tun2socksme/internal/dns"
 	"tun2socksme/internal/tun"
 	"tun2socksme/internal/tun2socksme"
 )
@@ -26,15 +27,24 @@ func main() {
 	fmt.Println(_config)
 
 	_tun := tun.New(
-		_config.Device,
-		_config.Username, _config.Password, _config.Host,
-		_config.Port,
+		_config.Interface.Device,
+		_config.Proxy.Username, _config.Proxy.Password, _config.Proxy.Host,
+		_config.Proxy.Port,
 	)
+
+	_dns, err := dns.New(
+		_config.Dns.Listen,
+		_config.Dns.Resolvers,
+	)
+	if err != nil {
+		log.Fatalln(err)
+	}
 
 	_tun2socksme := tun2socksme.New(
 		_tun,
-		_config.ExcludeNets,
-		_config.Metric,
+		_dns,
+		_config.Interface.ExcludeNets,
+		_config.Interface.Metric,
 	)
 
 	sch := make(chan os.Signal, 1)

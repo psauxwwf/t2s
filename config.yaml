@@ -1,9 +1,18 @@
-device: "tun0"
-username: ""
-password: ""
-host: "127.0.0.1"
-port: 1080
-exclude:
-  - "10.0.0.0/8"
-  - "172.16.0.0/12"
-  - "192.168.0.0/16"
+interface:
+  device: "tun0"
+  exclude:
+    - "10.0.0.0/8"
+    - "172.16.0.0/12"
+    - "192.168.0.0/16"
+  metric: 512
+proxy:
+  username: ""
+  password: ""
+  host: "127.0.0.1"
+  port: 1080
+
+# warning: udp not route to proxy, tun2socksme route only tcp
+dns:
+  listen: "127.1.1.53"
+  resolvers:
+    - "1.1.1.1:53/tcp"

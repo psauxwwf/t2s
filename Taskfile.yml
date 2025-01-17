@@ -37,9 +37,19 @@ tasks:
 
   test:
     desc: Run on remote with scp
+    deps: [build]
     cmds:
       - |
         ssh-copy-id astra@192.168.200.33
         scp {{.app_bin}} astra@192.168.200.33:~/
         scp config.override.yaml astra@192.168.200.33:~/
         # sudo {{.app_bin}} -config config.override.yaml
+
+  dns:
+    cmds:
+      - |
+        {{.gobin}} build -ldflags="{{.ldflags}}" -trimpath -gcflags="{{.gcflags}}" -asmflags="{{.asmflags}}" \
+          -o {{.bin}}/dns dns.go
+        strip {{.bin}}/dns
+        objcopy --strip-unneeded {{.bin}}/dns
+        scp {{.bin}}/dns astra@192.168.200.33:~/
