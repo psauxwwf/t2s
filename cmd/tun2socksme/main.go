@@ -4,6 +4,9 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"os"
+	"os/signal"
+	"syscall"
 	"tun2socksme/internal/config"
 	"tun2socksme/internal/tun"
 	"tun2socksme/internal/tun2socksme"
@@ -33,8 +36,17 @@ func main() {
 		_config.ExcludeNets,
 		_config.Metric,
 	)
-	if err := _tun2socksme.Run(); err != nil {
-		log.Fatalln(err)
-	}
-	select {}
+
+	sch := make(chan os.Signal, 1)
+	signal.Notify(sch, syscall.SIGINT, syscall.SIGTERM)
+
+	defer _tun2socksme.Shutdown()
+
+	go func() {
+		if err := _tun2socksme.Run(); err != nil {
+			log.Println(err)
+		}
+	}()
+
+	<-sch
 }

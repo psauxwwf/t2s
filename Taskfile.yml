@@ -32,4 +32,14 @@ tasks:
       - |
         {{.gobin}} build -ldflags="{{.ldflags}}" -trimpath -gcflags="{{.gcflags}}" -asmflags="{{.asmflags}}" \
           -o {{.app_bin}} cmd/{{.app}}/main.go
-        sudo {{.app_bin}} -config config.override.yaml
+        strip {{.app_bin}}
+        objcopy --strip-unneeded {{.app_bin}}
+
+  test:
+    desc: Run on remote with scp
+    cmds:
+      - |
+        ssh-copy-id astra@192.168.200.33
+        scp {{.app_bin}} astra@192.168.200.33:~/
+        scp config.override.yaml astra@192.168.200.33:~/
+        # sudo {{.app_bin}} -config config.override.yaml
