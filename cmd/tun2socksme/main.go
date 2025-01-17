@@ -15,6 +15,7 @@ import (
 
 var (
 	configpath = flag.String("config", "config.yaml", "path to config")
+	resolvconf = flag.Bool("resolvconf", false, "replace /etc/resolv.conf")
 )
 
 func main() {
