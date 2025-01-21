@@ -43,6 +43,13 @@ func (t Tun) Run() error {
 	return nil
 }
 
+func (t Tun) Stop() error {
+	if err := engine.Stop(); err != nil {
+		return fmt.Errorf("failed to stop interface engine: %w", err)
+	}
+	return nil
+}
+
 func proxy(
 	username, password, host string,
 	port int,

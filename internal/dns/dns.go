@@ -110,11 +110,16 @@ func New(
 	return _dns, nil
 }
 
-func (d *Dns) Listen() error {
-	defer func() { fmt.Println("dns is stop") }()
-
+func (d *Dns) Run() error {
 	if err := d.server.ListenAndServe(); err != nil {
 		return fmt.Errorf("failed to start dns server: %w", err)
+	}
+	return nil
+}
+
+func (d *Dns) Stop() error {
+	if err := d.server.Shutdown(); err != nil {
+		return fmt.Errorf("failed to stop dns server: %w", err)
 	}
 	return nil
 }

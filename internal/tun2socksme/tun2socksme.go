@@ -7,8 +7,10 @@ import (
 	"strings"
 	"tun2socksme/internal/dns"
 	"tun2socksme/internal/tun"
-	shell "tun2socksme/pkg"
+	"tun2socksme/pkg/shell"
 )
+
+const metric = "metric"
 
 type Gateway struct {
 	device  string
@@ -42,11 +44,11 @@ func (t *Tun2socksme) Run() error {
 		return fmt.Errorf("run tun2socks error: %w", err)
 	}
 	if err := t.Prepare(); err != nil {
-		return err
+		return fmt.Errorf("prepare error: %w", err)
 	}
 	go func() {
-		if err := t.dns.Listen(); err != nil {
-			log.Fatalln("dns fatal error: %w", err)
+		if err := t.dns.Run(); err != nil {
+			log.Println("dns fatal error: %w", err)
 		}
 	}()
 	return nil
@@ -57,7 +59,7 @@ func (t *Tun2socksme) Prepare() error {
 		return fmt.Errorf("gateway error: %w", err)
 	}
 	if err := t.disableRP(); err != nil {
-		return fmt.Errorf("rp error: %w", err)
+		log.Printf("rp error: %v", err)
 	}
 	if err := t.setExcludeNets(); err != nil {
 		return fmt.Errorf("route error: %w", err)
@@ -66,6 +68,19 @@ func (t *Tun2socksme) Prepare() error {
 		return fmt.Errorf("default route to proxy error: %w", err)
 	}
 	return nil
+}
+
+func (t *Tun2socksme) Shutdown() {
+	var funcs = []func() error{
+		t.deleteRoutes,
+		t.tun.Stop,
+		t.dns.Stop,
+	}
+	for _, f := range funcs {
+		if err := f(); err != nil {
+			log.Println(err)
+		}
+	}
 }
 
 func (t *Tun2socksme) setDefGate() error {
@@ -77,20 +92,31 @@ func (t *Tun2socksme) setDefGate() error {
 	if len(s) < 6 {
 		return fmt.Errorf("failed to get default gateway")
 	}
+
 	t.defgate = &Gateway{
 		address: s[2],
 		device:  s[4],
 	}
+	t.metric = t.getMertic(s)
 
-	metric, err := strconv.Atoi(s[len(s)-1])
-	if err != nil {
-		return fmt.Errorf("failed to get default metrice: %w", err)
-	}
-	if t.metric >= metric {
-		log.Printf("default metric %d is more then existed metric %d set metric=%d", t.metric, metric, metric/2)
-		t.metric = metric / 2
-	}
 	return nil
+}
+
+func (t *Tun2socksme) getMertic(out []string) int {
+	for i, entry := range out {
+		if entry != metric {
+			continue
+		}
+		if i+1 >= len(out) {
+			break
+		}
+		if m, err := strconv.Atoi(out[i+1]); err == nil && t.metric >= m {
+			log.Printf("default metric %d is more then existed metric %d set metric=%d", t.metric, m, m/2)
+			return m / 2
+		}
+		break
+	}
+	return t.metric
 }
 
 func (t *Tun2socksme) setExcludeNets() error {
@@ -129,7 +155,6 @@ func (t *Tun2socksme) deleteRoutes() error {
 }
 
 func (t *Tun2socksme) disableRP() error {
-
 	if _, err := shell.New("sysctl", "net.ipv4.conf.all.rp_filter=0").Run(); err != nil {
 		return fmt.Errorf("failed disable rp: %w", err)
 	}
@@ -137,10 +162,4 @@ func (t *Tun2socksme) disableRP() error {
 		return fmt.Errorf("failed disable rp: %w", err)
 	}
 	return nil
-}
-
-func (t *Tun2socksme) Shutdown() {
-	if err := t.deleteRoutes(); err != nil {
-		log.Println("delete routes error:", err)
-	}
 }

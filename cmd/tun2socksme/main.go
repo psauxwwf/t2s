@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -25,7 +24,6 @@ func main() {
 	if err != nil {
 		log.Println("config parse error:", err, "used default values")
 	}
-	fmt.Println(_config)
 
 	_tun := tun.New(
 		_config.Interface.Device,
@@ -53,11 +51,9 @@ func main() {
 
 	defer _tun2socksme.Shutdown()
 
-	go func() {
-		if err := _tun2socksme.Run(); err != nil {
-			log.Println(err)
-		}
-	}()
+	if err := _tun2socksme.Run(); err != nil {
+		log.Println(err)
+	}
 
 	<-sch
 }
