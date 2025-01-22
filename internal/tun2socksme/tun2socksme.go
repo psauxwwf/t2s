@@ -5,8 +5,10 @@ import (
 	"log"
 	"strconv"
 	"strings"
+
 	"tun2socksme/internal/dns"
 	"tun2socksme/internal/tun"
+
 	"tun2socksme/pkg/shell"
 )
 
@@ -67,7 +69,7 @@ func (t *Tun2socksme) Prepare() error {
 	if err := t.setExcludeNets(); err != nil {
 		return fmt.Errorf("route error: %w", err)
 	}
-	if err := t.setDefGateToTun(); err != nil {
+	if err := t.setDefgate(); err != nil {
 		return fmt.Errorf("default route to proxy error: %w", err)
 	}
 	return nil
@@ -98,7 +100,7 @@ func (t *Tun2socksme) setExcludeNets() error {
 	return nil
 }
 
-func (t *Tun2socksme) setDefGateToTun() error {
+func (t *Tun2socksme) setDefgate() error {
 	if _, err := shell.New("ip", "link", "set", t.tun.Device, "up").Run(); err != nil {
 		return fmt.Errorf("failed to up %s device: %w", t.tun.Device, err)
 	}
