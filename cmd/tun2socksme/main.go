@@ -39,12 +39,15 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	_tun2socksme := tun2socksme.New(
+	_tun2socksme, err := tun2socksme.New(
 		_tun,
 		_dns,
 		_config.Interface.ExcludeNets,
 		_config.Interface.Metric,
 	)
+	if err != nil {
+		log.Fatalln(err)
+	}
 
 	sch := make(chan os.Signal, 1)
 	signal.Notify(sch, syscall.SIGINT, syscall.SIGTERM)

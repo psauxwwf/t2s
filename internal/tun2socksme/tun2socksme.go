@@ -10,8 +10,6 @@ import (
 	"tun2socksme/pkg/shell"
 )
 
-const metric = "metric"
-
 type Gateway struct {
 	device  string
 	address string
@@ -30,13 +28,21 @@ func New(
 	_dns *dns.Dns,
 	_excludenets []string,
 	_metric int,
-) Tun2socksme {
-	return Tun2socksme{
+) (*Tun2socksme, error) {
+	s, err := getRoute()
+	if err != nil {
+		return nil, err
+	}
+	return &Tun2socksme{
 		tun:         _tun,
 		dns:         _dns,
 		excludenets: _excludenets,
-		metric:      _metric,
-	}
+		metric:      getMertic(s, _metric),
+		defgate: &Gateway{
+			address: s[2],
+			device:  s[4],
+		},
+	}, nil
 }
 
 func (t *Tun2socksme) Run() error {
@@ -55,9 +61,6 @@ func (t *Tun2socksme) Run() error {
 }
 
 func (t *Tun2socksme) Prepare() error {
-	if err := t.setDefGate(); err != nil {
-		return fmt.Errorf("gateway error: %w", err)
-	}
 	if err := t.disableRP(); err != nil {
 		log.Printf("rp error: %v", err)
 	}
@@ -81,42 +84,6 @@ func (t *Tun2socksme) Shutdown() {
 			log.Println(err)
 		}
 	}
-}
-
-func (t *Tun2socksme) setDefGate() error {
-	out, err := shell.New("ip", "ro", "sh").Run()
-	if err != nil {
-		return fmt.Errorf("failed to get default gateway: %w", err)
-	}
-	s := strings.Fields(strings.TrimSpace(out))
-	if len(s) < 6 {
-		return fmt.Errorf("failed to get default gateway")
-	}
-
-	t.defgate = &Gateway{
-		address: s[2],
-		device:  s[4],
-	}
-	t.metric = t.getMertic(s)
-
-	return nil
-}
-
-func (t *Tun2socksme) getMertic(out []string) int {
-	for i, entry := range out {
-		if entry != metric {
-			continue
-		}
-		if i+1 >= len(out) {
-			break
-		}
-		if m, err := strconv.Atoi(out[i+1]); err == nil && t.metric >= m {
-			log.Printf("default metric %d is more then existed metric %d set metric=%d", t.metric, m, m/2)
-			return m / 2
-		}
-		break
-	}
-	return t.metric
 }
 
 func (t *Tun2socksme) setExcludeNets() error {
@@ -162,4 +129,33 @@ func (t *Tun2socksme) disableRP() error {
 		return fmt.Errorf("failed disable rp: %w", err)
 	}
 	return nil
+}
+
+func getMertic(out []string, metric int) int {
+	for i, entry := range out {
+		if entry != "metric" {
+			continue
+		}
+		if i+1 >= len(out) {
+			break
+		}
+		if m, err := strconv.Atoi(out[i+1]); err == nil && metric >= m {
+			log.Printf("default metric %d is more then existed metric %d set metric=%d", metric, m, m/2)
+			return m / 2
+		}
+		break
+	}
+	return metric
+}
+
+func getRoute() ([]string, error) {
+	out, err := shell.New("ip", "ro", "sh").Run()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get default gateway: %w", err)
+	}
+	splited := strings.Fields(strings.TrimSpace(out))
+	if len(splited) < 6 {
+		return nil, fmt.Errorf("failed to get default gateway")
+	}
+	return splited, nil
 }
