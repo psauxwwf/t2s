@@ -34,7 +34,7 @@ func main() {
 	_dns, err := dns.New(
 		_config.Dns.Listen,
 		_config.Dns.Resolvers,
-		_config.Dns.Render,
+		*_config.Dns.Render,
 	)
 	if err != nil {
 		log.Fatalln(err)
