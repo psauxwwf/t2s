@@ -34,6 +34,7 @@ func main() {
 	_dns, err := dns.New(
 		_config.Dns.Listen,
 		_config.Dns.Resolvers,
+		_config.Dns.Render,
 	)
 	if err != nil {
 		log.Fatalln(err)
@@ -55,7 +56,7 @@ func main() {
 	defer _tun2socksme.Shutdown()
 
 	if err := _tun2socksme.Run(); err != nil {
-		log.Println(err)
+		log.Fatalln(err)
 	}
 
 	<-sch

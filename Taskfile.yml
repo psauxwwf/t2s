@@ -18,11 +18,6 @@ env:
   GOOS: linux
 
 tasks:
-  default:
-    desc: Show help
-    cmds:
-      - "{{.bin}}/task --list"
-
   setup:
     desc: Set up the environment
     silent: true
