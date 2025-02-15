@@ -16,3 +16,4 @@ dns:
   listen: "127.1.1.53"
   resolvers:
     - "1.1.1.1:53/tcp"
+  render: true

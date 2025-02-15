@@ -21,8 +21,9 @@ type proxyConfig struct {
 }
 
 type dnsConfig struct {
-	Listen    string   `yaml:"username" env-description:"username for socks5 proxy" env-default:"127.1.1.53"`
+	Listen    string   `yaml:"listen" env-description:"listen local dns" env-default:"127.1.1.53"`
 	Resolvers []string `yaml:"resolvers" env-description:"dns resolvers" env-default:"1.1.1.1:53/tcp"`
+	Render    bool     `yaml:"render" env-description:"render resolvconf on local dns" env-default:"true"`
 }
 
 type Config struct {
@@ -66,6 +67,7 @@ func New(filename string) (*Config, error) {
 			Resolvers: []string{
 				"1.1.1.1:53/tcp",
 			},
+			Render: true,
 		},
 	}
 	if err := cleanenv.ReadConfig(filename, &_config); err != nil {
