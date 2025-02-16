@@ -30,7 +30,8 @@ tasks:
     silent: true
     cmds:
       - >
-        {{.gobin}} build 
+        {{.gobin}} build
+        -tags netgo
         -ldflags="{{.ldflags}}" 
         -trimpath 
         -gcflags="{{.gcflags}}" 
