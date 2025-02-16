@@ -52,7 +52,6 @@ func main() {
 
 	sch := make(chan os.Signal, 1)
 	signal.Notify(sch, syscall.SIGINT, syscall.SIGTERM)
-
 	defer _tun2socksme.Shutdown()
 
 	if err := _tun2socksme.Run(); err != nil {
