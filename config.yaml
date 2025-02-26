@@ -1,3 +1,6 @@
+proxy:
+  type: "socks"
+
 interface:
   device: "tun0"
   exclude:
@@ -5,15 +8,24 @@ interface:
     - "172.16.0.0/12"
     - "192.168.0.0/16"
   metric: 512
-proxy:
-  username: ""
-  password: ""
+  # custom_routes: # ip ro add
+  #   - "192.168.200.53 via 192.168.200.1 dev virbr0"
+
+socks:
+  username: "username"
+  password: "password"
   host: "127.0.0.1"
-  port: 1080
+  port: 9050
+
+ssh:
+  username: "user"
+  host: "192.168.1.1"
+  port: 22
 
 # warning: udp not route to proxy, tun2socksme route only tcp
 dns:
   listen: "127.1.1.53"
   resolvers:
     - "1.1.1.1:53/tcp"
+    # - "10.10.10.1:53/udp"
   render: true
