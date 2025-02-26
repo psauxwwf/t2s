@@ -53,23 +53,50 @@ type Config struct {
 	Dns       dnsConfig      `yaml:"dns" env-description:"dns params"`
 }
 
+var _true = true
+
+var _default = Config{
+	Interface: intefaceConfig{
+		Device: "tun0",
+		ExcludeNets: []string{
+			"10.0.0.0/8",
+			"172.16.0.0/12",
+			"192.168.0.0/16",
+		},
+		Metric: 512,
+	},
+	Proxy: proxyConfig{
+		Type: "socks",
+	},
+	Socks: socksConfig{
+		Host: "127.0.0.1",
+		Port: 1080,
+	},
+	Ssh: sshConfig{
+		Port: 22,
+	},
+	Dns: dnsConfig{
+		Listen: "127.1.1.53",
+		Resolvers: []string{
+			"1.1.1.1:53/tcp",
+		},
+		Render: &_true,
+	},
+}
+
 func New(filename string) (*Config, error) {
 	port, err := net.RandomPort()
 	if err != nil {
 		log.Println("failed to get port for local ssh tunnel")
 		port = 31888
 	}
-	var (
-		_config = Config{
-			Ssh: sshConfig{
-				LocalPort: port,
-			},
-		}
-	)
+	_config := Config{Ssh: sshConfig{LocalPort: port}}
+
 	if err := cleanenv.ReadConfig(filename, &_config); err != nil {
-		if !os.IsNotExist(err) {
-			return &_config, fmt.Errorf("failed to load config: %w", err)
+		if os.IsNotExist(err) {
+			return &_default, fmt.Errorf("config not exists: %w", err)
 		}
+		return nil, fmt.Errorf("failed to load config: %w", err)
 	}
 	return &_config, nil
 }
