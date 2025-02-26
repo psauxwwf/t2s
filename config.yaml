@@ -26,6 +26,7 @@ ssh:
 dns:
   listen: "127.1.1.53"
   resolvers:
+    # - "127.1.2.53:53/tcp"
     - "1.1.1.1:53/tcp"
     # - "10.10.10.1:53/udp"
   render: true
