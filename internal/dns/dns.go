@@ -121,6 +121,9 @@ func New(
 
 func (d *Dns) Run() error {
 	if d.render {
+		// if _, err := shell.New("systemctl", "stop", "systemd-resolved").Run(); err != nil {
+		// 	log.Println(err)
+		// }
 		if err := d.renderConf(); err != nil {
 			return fmt.Errorf("failed to /etc/resolv.conf: %w", err)
 		}
@@ -136,6 +139,9 @@ func (d *Dns) Stop() error {
 		if err := fs.WriteFile(respath, d.resolvconf); err != nil {
 			return fmt.Errorf("resolvconf error: %w", err)
 		}
+		// if _, err := shell.New("systemctl", "restart", "systemd-resolved").Run(); err != nil {
+		// 	log.Println(err)
+		// }
 	}
 
 	if err := d.server.Shutdown(); err != nil {

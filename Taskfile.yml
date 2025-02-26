@@ -8,8 +8,8 @@ vars:
   bin: "{{.PWD}}/bin"
   app: "tun2socksme"
   app_bin: "{{.bin}}/{{.app}}"
-  remote_user: astra
-  remote_host: 192.168.200.33
+  remote_user: root
+  remote_host: 192.168.200.53
   remote_dir: "~/"
 
 env:
@@ -41,7 +41,7 @@ tasks:
       - objcopy --strip-unneeded {{.app_bin}}
 
   test:
-    desc: Run on remote with scp
+    desc: Build and run
     deps: [build]
     silent: true
     cmds:
@@ -50,6 +50,15 @@ tasks:
       # - scp config.override.yaml {{.remote_user}}@{{.remote_host}}:{{.remote_dir}}
       # Uncomment the following line to run the app remotely
       # - ssh {{.remote_user}}@{{.remote_host}} 'sudo {{.remote_dir}}/{{.app}} -config config.override.yaml'
+
+  test-remote:
+    desc: Run on remote with scp
+    deps: [build]
+    silent: true
+    cmds:
+      - scp {{.app_bin}} {{.remote_user}}@{{.remote_host}}:{{.remote_dir}}
+      - scp config.override.yaml {{.remote_user}}@{{.remote_host}}:{{.remote_dir}}
+      - ssh {{.remote_user}}@{{.remote_host}} 'sudo {{.remote_dir}}/{{.app}} -config config.override.yaml'
 
   dns:
     desc: Build and deploy DNS tool
