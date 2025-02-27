@@ -1,3 +1,34 @@
+### Proxy to socks5
+
+### Proxy to SSH
+
+### Proxy to [SS](https://github.com/shadowsocks/go-shadowsocks2)
+
+> [!note] With obfuscating
+> https://github.com/shadowsocks/simple-obfs > https://github.com/shadowsocks/v2ray-plugin
+
+```bash
+wget https://github.com/shadowsocks/go-shadowsocks2/releases/download/v0.1.5/shadowsocks2-linux.tgz
+tar -xf shadowsocks2-linux.tgz
+shadowsocks2-linux -s 'ss://AEAD_CHACHA20_POLY1305:your-password@:8488' -verbose
+```
+
+```
+-proxy ss://method:password@server_host:port/<?obfs=http;obfs-host=xxx>
+```
+
+### Proxy to [GOST](https://github.com/go-gost/gost)
+
+```bash
+wget https://github.com/go-gost/gost/releases/download/v3.0.0/gost_3.0.0_linux_amd64v3.tar.gz
+tar -xf gost_3.0.0_linux_amd64v3.tar.gz
+gost -L=relay://username:password@:1080
+```
+
+```
+-proxy relay://<username>:<password>@server_host:port?<nodelay=false>
+```
+
 ### Proxy to tor
 
 ```bash
