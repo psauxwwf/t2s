@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"tun2socksme/pkg/fs"
 	"tun2socksme/pkg/net"
 
 	"github.com/ilyakaznacheev/cleanenv"
+	"gopkg.in/yaml.v3"
 )
 
 const (
@@ -36,7 +38,7 @@ type sshConfig struct {
 	Username  string `yaml:"username" env-description:"username for ssh" env-default:""`
 	Host      string `yaml:"host" env-description:"host for ssh" env-default:""`
 	Port      int    `yaml:"port" env-description:"removte ssh port" env-default:"22"`
-	LocalPort int
+	LocalPort int    `yaml:"-"`
 }
 
 type dnsConfig struct {
@@ -94,9 +96,23 @@ func New(filename string) (*Config, error) {
 
 	if err := cleanenv.ReadConfig(filename, &_config); err != nil {
 		if os.IsNotExist(err) {
+			if err := _default.Save(filename); err != nil {
+				log.Println("default config error: %w", err)
+			}
 			return &_default, fmt.Errorf("config not exists: %w", err)
 		}
 		return nil, fmt.Errorf("failed to load config: %w", err)
 	}
 	return &_config, nil
+}
+
+func (c *Config) Save(path string) error {
+	data, err := yaml.Marshal(&c)
+	if err != nil {
+		return fmt.Errorf("failed to marshall config: %w", err)
+	}
+	if err := fs.WriteFile(path, data); err != nil {
+		return fmt.Errorf("failed to save default config: %w", err)
+	}
+	return nil
 }
