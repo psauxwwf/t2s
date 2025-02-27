@@ -25,7 +25,8 @@ Bridge obfs4 54.38.138.85:21641 E8D24300464D24AB6D905B3D01029E010363D731 cert=g7
 tor --verify-config
 systemctl enable tor --now
 systemctl restart tor
-curl --socks5-hostname 127.0.0.1:9050 http://wiki47qqn6tey4id7xeqb6l7uj6jueacxlqtk3adshox3zdohvo35vad.onion
+curl --socks5-hostname 127.0.0.1:1080 http://wiki47qqn6tey4id7xeqb6l7uj6jueacxlqtk3adshox3zdohvo35vad.onion
+curl --socks5-hostname 127.0.0.1:1080 ident.me
 ```
 
 ```bash

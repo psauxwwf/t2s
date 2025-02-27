@@ -67,15 +67,15 @@ func (t *Tun2socksme) Run() error {
 		sigch = make(chan os.Signal, 1)
 	)
 
+	if err := t.Defgate(); err != nil {
+		return fmt.Errorf("default route to proxy error: %w", err)
+	}
+
 	go func() {
 		if err := t.dns.Run(); err != nil {
 			errch <- fmt.Errorf("dns fatal error: %w", err)
 		}
 	}()
-
-	if err := t.Defgate(); err != nil {
-		return fmt.Errorf("default route to proxy error: %w", err)
-	}
 
 	signal.Notify(sigch, syscall.SIGINT, syscall.SIGTERM)
 	select {
