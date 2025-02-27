@@ -4,6 +4,7 @@ go 1.20
 
 require (
 	github.com/ilyakaznacheev/cleanenv v1.5.0
+	github.com/miekg/dns v1.1.62
 	github.com/xjasonlyu/tun2socks/v2 v2.5.2
 )
 
@@ -21,10 +22,13 @@ require (
 	github.com/joho/godotenv v1.5.1 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	go.uber.org/atomic v1.11.0 // indirect
-	golang.org/x/crypto v0.9.0 // indirect
-	golang.org/x/net v0.10.0 // indirect
-	golang.org/x/sys v0.8.0 // indirect
+	golang.org/x/crypto v0.25.0 // indirect
+	golang.org/x/mod v0.18.0 // indirect
+	golang.org/x/net v0.27.0 // indirect
+	golang.org/x/sync v0.7.0 // indirect
+	golang.org/x/sys v0.22.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
+	golang.org/x/tools v0.22.0 // indirect
 	golang.zx2c4.com/wintun v0.0.0-20230126152724-0fa3db229ce2 // indirect
 	golang.zx2c4.com/wireguard v0.0.0-20230325221338-052af4a8072b // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect

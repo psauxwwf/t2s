@@ -2,7 +2,6 @@ package engine
 
 import (
 	"errors"
-	"fmt"
 	"net"
 	"os/exec"
 	"strings"
@@ -42,17 +41,12 @@ var (
 
 // Start starts the default engine up.
 func Start() error {
-	if err := start(); err != nil {
-		return fmt.Errorf("engine error: %w", err)
-	}
-	return nil
+	return start()
 }
 
 // Stop shuts the default engine down.
-func Stop() {
-	if err := stop(); err != nil {
-		log.Fatalf("[ENGINE] failed to stop: %v", err)
-	}
+func Stop() error {
+	return stop()
 }
 
 // Insert loads *Key to the default engine.
