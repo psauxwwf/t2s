@@ -91,3 +91,7 @@ dns:
     - "127.1.1.253:53/tcp"
     - "1.1.1.1:53/tcp"
 ```
+
+---
+
+- https://github.com/xjasonlyu/tun2socks/wiki/Proxy-Models
