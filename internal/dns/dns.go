@@ -3,9 +3,16 @@ package dns
 import (
 	"fmt"
 	"log"
+	"sync"
 
 	"github.com/miekg/dns"
 )
+
+func lockf(m *sync.Mutex, f func() error) error {
+	m.Lock()
+	defer m.Unlock()
+	return f()
+}
 
 type Dns struct {
 	listen    string
@@ -13,6 +20,8 @@ type Dns struct {
 	render    bool
 	server    *dns.Server
 	manager   *manager
+
+	m sync.Mutex
 }
 
 func (d *Dns) resolv(w dns.ResponseWriter, r *dns.Msg) {
@@ -74,7 +83,7 @@ func New(
 
 func (d *Dns) Run() error {
 	if d.render {
-		if err := d.manager.Set(); err != nil {
+		if err := lockf(&d.m, d.manager.Set); err != nil {
 			log.Printf("set dns error: %v", err)
 		}
 	}
@@ -86,7 +95,7 @@ func (d *Dns) Run() error {
 
 func (d *Dns) Stop() error {
 	if d.render {
-		if err := d.manager.Revert(); err != nil {
+		if err := lockf(&d.m, d.manager.Revert); err != nil {
 			log.Printf("revert dns error: %v", err)
 		}
 	}

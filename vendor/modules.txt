@@ -5,7 +5,7 @@ github.com/BurntSushi/toml/internal
 # github.com/ajg/form v1.5.1
 ## explicit
 github.com/ajg/form
-# github.com/devil666face/tun2socks v0.0.0-20250301133302-f8bfe20d5df8
+# github.com/devil666face/tun2socks v0.0.0-20250301224203-b3709862bf07
 ## explicit; go 1.23.1
 github.com/devil666face/tun2socks/buffer
 github.com/devil666face/tun2socks/buffer/allocator
@@ -78,6 +78,8 @@ github.com/miekg/dns
 # go.uber.org/atomic v1.11.0
 ## explicit; go 1.18
 go.uber.org/atomic
+# go.uber.org/automaxprocs v1.6.0
+## explicit; go 1.20
 # go.uber.org/multierr v1.11.0
 ## explicit; go 1.19
 go.uber.org/multierr

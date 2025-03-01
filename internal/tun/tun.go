@@ -54,7 +54,6 @@ func (t Tun) Run() chan error {
 	net.DefaultResolver.Dial = dialer.DialContext
 	engine.Insert(t.engine)
 	if err := engine.Start(); err != nil {
-		// log.Println(err)
 		errch <- fmt.Errorf("fatal error in interface engine: %w", err)
 		return errch
 	}
