@@ -2,15 +2,15 @@ package tun
 
 import (
 	"fmt"
+	"strings"
 	"tun2socksme/internal/config"
 	"tun2socksme/pkg/shell"
 )
 
 type ssh struct {
-	username        string
-	host            string
-	port, localPort int
-	sshPID          int
+	username, host, args string
+	port, localPort      int
+	sshPID               int
 	*Tun
 }
 
@@ -19,7 +19,7 @@ func wrapSsh(
 	tun *Tun,
 ) *ssh {
 	return &ssh{
-		config.Ssh.Username, config.Ssh.Host,
+		config.Ssh.Username, config.Ssh.Host, config.Ssh.Args,
 		config.Ssh.Port, config.Ssh.LocalPort,
 		0,
 		tun,
@@ -35,7 +35,8 @@ func Ssh(_config *config.Config) (Tunnable, error) {
 		_config,
 		New(
 			_config.Interface.Device,
-			"", "", "127.0.0.1",
+			config.Socks5,
+			"", "", "127.0.0.1", "",
 			_config.Ssh.LocalPort,
 		),
 	), nil
@@ -65,5 +66,10 @@ func (s *ssh) sshOpts() []string {
 		fmt.Sprintf("%s@%s", s.username, s.host),
 		"-N",
 	}...)
+	if s.args != "" {
+		opts = append(opts,
+			strings.Fields(strings.TrimSpace(s.args))...,
+		)
+	}
 	return opts
 }
