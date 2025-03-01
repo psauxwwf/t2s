@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build (linux && amd64) || (linux && arm64)
-// +build linux,amd64 linux,arm64
+//go:build linux
+// +build linux
 
 // Package stopfd provides an type that can be used to signal the stop of a dispatcher.
 package stopfd
@@ -25,6 +25,8 @@ import (
 )
 
 // StopFD is an eventfd used to signal the stop of a dispatcher.
+//
+// +stateify savable
 type StopFD struct {
 	EFD int
 }
