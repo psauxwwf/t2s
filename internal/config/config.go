@@ -16,8 +16,29 @@ const (
 	Ssh   = "ssh"
 )
 
+const (
+	Socks5 = "socks5"
+	Ss     = "ss"
+	Relay  = "relay"
+)
+
+var ErrProtoConains = fmt.Errorf("proto must be one of %s/%s/%s", Socks5, Ss, Relay)
+
+func protoContains(proto string) bool {
+	for _, p := range []string{
+		Socks5,
+		Ss,
+		Relay,
+	} {
+		if p == proto {
+			return true
+		}
+	}
+	return false
+}
+
 type proxyConfig struct {
-	Type string `yaml:"type" env-description:"type of proxy socks/ssh" env-default:"socks"`
+	Type string `yaml:"type" env-description:"type of proxy <socks/ssh>" env-default:"socks"`
 }
 
 type intefaceConfig struct {
@@ -28,16 +49,19 @@ type intefaceConfig struct {
 }
 
 type socksConfig struct {
+	Proto    string `yaml:"proto" env-description:"proto <socks5/ss/relay>" env-default:"socks5"`
 	Username string `yaml:"username" env-description:"username for socks5 proxy" env-default:""`
 	Password string `yaml:"password" env-description:"password for socks5 proxy" env-default:""`
 	Host     string `yaml:"host" env-description:"ip address or hostname remote proxy" env-default:"127.0.0.1"`
 	Port     int    `yaml:"port" env-description:"socks5 port remote proxy" env-default:"1080"`
+	Args     string `yaml:"args" env-description:"socks5://username:password@host:port/<args>" env-default:""`
 }
 
 type sshConfig struct {
 	Username  string `yaml:"username" env-description:"username for ssh" env-default:""`
 	Host      string `yaml:"host" env-description:"host for ssh" env-default:""`
 	Port      int    `yaml:"port" env-description:"removte ssh port" env-default:"22"`
+	Args      string `yaml:"args" env-description:"extra args for ssh like -J user@jumphost" env-default:""`
 	LocalPort int    `yaml:"-"`
 }
 
@@ -71,8 +95,9 @@ var _default = Config{
 		Type: "socks",
 	},
 	Socks: socksConfig{
-		Host: "127.0.0.1",
-		Port: 1080,
+		Proto: "socks5",
+		Host:  "127.0.0.1",
+		Port:  1080,
 	},
 	Ssh: sshConfig{
 		Port: 22,
@@ -102,6 +127,9 @@ func New(filename string) (*Config, error) {
 			return &_default, fmt.Errorf("config not exists: %w", err)
 		}
 		return nil, fmt.Errorf("failed to load config: %w", err)
+	}
+	if !protoContains(_config.Socks.Proto) {
+		return &_default, ErrProtoConains
 	}
 	return &_config, nil
 }

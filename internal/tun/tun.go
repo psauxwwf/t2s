@@ -26,7 +26,8 @@ func (t *Tun) Device() string { return t.device }
 
 func New(
 	_device string,
-	username, password, host string,
+	proto string,
+	username, password, host, args string,
 	port int,
 ) *Tun {
 	return &Tun{
@@ -34,7 +35,8 @@ func New(
 			Device:   fmt.Sprintf("tun://%s", _device),
 			LogLevel: "silent",
 			Proxy: proxy(
-				username, password, host,
+				proto,
+				username, password, host, args,
 				port,
 			),
 		},
@@ -50,6 +52,7 @@ func (t Tun) Run() chan error {
 	net.DefaultResolver.Dial = dialer.DialContext
 	engine.Insert(t.engine)
 	if err := engine.Start(); err != nil {
+		// log.Println(err)
 		errch <- fmt.Errorf("fatal error in interface engine: %w", err)
 		return errch
 	}
@@ -64,13 +67,17 @@ func (t Tun) Stop() error {
 }
 
 func proxy(
-	username, password, host string,
+	proto string,
+	username, password, host, args string,
 	port int,
 ) string {
-	var s = "socks5://"
+	var s = fmt.Sprintf("%s://", proto)
 	if username != "" && password != "" {
 		s += fmt.Sprintf("%s:%s@", username, password)
 	}
 	s += fmt.Sprintf("%s:%d", host, port)
+	if args != "" {
+		s += fmt.Sprintf("/%s", args)
+	}
 	return s
 }
