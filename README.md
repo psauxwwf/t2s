@@ -1,6 +1,29 @@
 ### Proxy to socks5
 
+```yaml
+proxy:
+  type: "socks" # socks/ssh
+---
+socks:
+  proto: "socks5" # socks5/ss/relay
+  username: "username"
+  password: "password"
+  host: "100.3.3.7"
+  port: 1080
+```
+
 ### Proxy to SSH
+
+```yaml
+proxy:
+  type: "ssh" # socks/ssh
+---
+ssh:
+  username: "user"
+  host: "100.3.3.7"
+  port: 1337
+  extra: ""
+```
 
 ### Proxy to [SS](https://github.com/shadowsocks/go-shadowsocks2)
 
@@ -10,7 +33,7 @@
 ```bash
 wget https://github.com/shadowsocks/go-shadowsocks2/releases/download/v0.1.5/shadowsocks2-linux.tgz
 tar -xf shadowsocks2-linux.tgz
-shadowsocks2-linux -s 'ss://AEAD_CHACHA20_POLY1305:your-password@:8488' -verbose
+shadowsocks2-linux -s 'ss://AEAD_CHACHA20_POLY1305:password@100.3.3.7:1080' -verbose
 ```
 
 ```yaml
@@ -22,7 +45,7 @@ socks:
   username: "AEAD_CHACHA20_POLY1305"
   password: "password"
   host: "100.3.3.7"
-  port: 8488
+  port: 1080
   extra: ""
 ```
 
@@ -35,11 +58,24 @@ ss://method:password@server_host:port/<?obfs=http;obfs-host=xxx>
 ```bash
 wget https://github.com/go-gost/gost/releases/download/v3.0.0/gost_3.0.0_linux_amd64.tar.gz
 tar -xf gost_3.0.0_linux_amd64.tar.gz
-gost -L=relay://username:password@:1080
+gost -L=relay://username:password@100.3.3.7:1080
+```
+
+```yaml
+proxy:
+  type: "socks" # socks/ssh
+---
+socks:
+  proto: "relay" # socks5/ss/relay
+  username: "username"
+  password: "password"
+  host: "100.3.3.7"
+  port: 1080
+  extra: ""
 ```
 
 ```
--proxy relay://<username>:<password>@server_host:port?<nodelay=false>
+relay://<username>:<password>@server_host:port?<nodelay=false>
 ```
 
 ### Proxy to tor
@@ -64,6 +100,8 @@ Bridge obfs4 140.186.139.199:4444 A17E0D3FE22FA225EB4ACFEF242DBD1C71ED1D6B cert=
 Bridge obfs4 141.95.106.45:12558 F1A7BBDED674C0654B04ED387FFCB1A5DD2B2ED5 cert=TWRS4j6AKbKH/SL/bAqHkP7fI7C3P3dQoV+D8pRgqcJCK+r4SvZhg3k661ikgg732nuADA iat-mode=0
 Bridge obfs4 54.38.138.85:21641 E8D24300464D24AB6D905B3D01029E010363D731 cert=g7Gsuzkk2ZG88oslXKYx/Cn1XHj3DaAJRKARzN1kHrfa4B4mTCjF/0v+d1HxUr4ujYvXCQ iat-mode=0
 ```
+
+_Check_
 
 ```bash
 tor --verify-config
