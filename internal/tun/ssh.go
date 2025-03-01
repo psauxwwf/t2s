@@ -35,7 +35,7 @@ func Ssh(_config *config.Config) (Tunnable, error) {
 		_config,
 		New(
 			_config.Interface.Device,
-			config.Socks5,
+			config.SocksProto,
 			"", "", "127.0.0.1", "",
 			_config.Ssh.LocalPort,
 		),
