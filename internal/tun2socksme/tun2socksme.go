@@ -213,8 +213,8 @@ func getDefgate(iprosh []string) *Gateway {
 
 func getTun(_config *config.Config) (tun.Tunnable, error) {
 	var m = map[string]func(*config.Config) (tun.Tunnable, error){
-		config.Socks: tun.Socks,
-		config.Ssh:   tun.Ssh,
+		config.SocksType: tun.Socks,
+		config.SshType:   tun.Ssh,
 	}
 
 	if f, ok := m[_config.Proxy.Type]; ok {
