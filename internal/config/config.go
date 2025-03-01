@@ -12,23 +12,25 @@ import (
 )
 
 const (
-	Socks = "socks"
-	Ssh   = "ssh"
+	SocksType = "socks"
+	SshType   = "ssh"
 )
 
 const (
-	Socks5 = "socks5"
-	Ss     = "ss"
-	Relay  = "relay"
+	SocksProto = "socks5"
+	SsProto    = "ss"
+	RelayProto = "relay"
 )
 
-var ErrProtoConains = fmt.Errorf("proto must be one of %s/%s/%s", Socks5, Ss, Relay)
+var ErrProtoConains = fmt.Errorf("proto must be one of %s/%s/%s",
+	SocksProto, SsProto, RelayProto,
+)
 
 func protoContains(proto string) bool {
 	for _, p := range []string{
-		Socks5,
-		Ss,
-		Relay,
+		SocksProto,
+		SsProto,
+		RelayProto,
 	} {
 		if p == proto {
 			return true
@@ -128,9 +130,9 @@ func New(filename string) (*Config, error) {
 		}
 		return nil, fmt.Errorf("failed to load config: %w", err)
 	}
-	if !protoContains(_config.Socks.Proto) {
-		return &_default, ErrProtoConains
-	}
+	// if !protoContains(_config.Socks.Proto) {
+	// 	return &_default, ErrProtoConains
+	// }
 	return &_config, nil
 }
 
