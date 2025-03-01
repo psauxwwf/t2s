@@ -3,7 +3,7 @@ module tun2socksme
 go 1.23.4
 
 require (
-	github.com/devil666face/tun2socks v0.0.0-20250301133302-f8bfe20d5df8
+	github.com/devil666face/tun2socks v0.0.0-20250301224203-b3709862bf07
 	github.com/ilyakaznacheev/cleanenv v1.5.0
 	github.com/miekg/dns v1.1.63
 	gopkg.in/yaml.v3 v3.0.1
@@ -25,6 +25,7 @@ require (
 	github.com/joho/godotenv v1.5.1 // indirect
 	github.com/kr/pretty v0.1.0 // indirect
 	go.uber.org/atomic v1.11.0 // indirect
+	go.uber.org/automaxprocs v1.6.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
 	golang.org/x/crypto v0.35.0 // indirect
