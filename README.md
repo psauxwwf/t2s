@@ -13,15 +13,28 @@ tar -xf shadowsocks2-linux.tgz
 shadowsocks2-linux -s 'ss://AEAD_CHACHA20_POLY1305:your-password@:8488' -verbose
 ```
 
+```yaml
+proxy:
+  type: "socks" # socks/ssh
+---
+socks:
+  proto: "ss"
+  username: "AEAD_CHACHA20_POLY1305"
+  password: "password"
+  host: "100.3.3.7"
+  port: 8488
+  extra: ""
 ```
--proxy ss://method:password@server_host:port/<?obfs=http;obfs-host=xxx>
+
+```
+ss://method:password@server_host:port/<?obfs=http;obfs-host=xxx>
 ```
 
 ### Proxy to [GOST](https://github.com/go-gost/gost)
 
 ```bash
-wget https://github.com/go-gost/gost/releases/download/v3.0.0/gost_3.0.0_linux_amd64v3.tar.gz
-tar -xf gost_3.0.0_linux_amd64v3.tar.gz
+wget https://github.com/go-gost/gost/releases/download/v3.0.0/gost_3.0.0_linux_amd64.tar.gz
+tar -xf gost_3.0.0_linux_amd64.tar.gz
 gost -L=relay://username:password@:1080
 ```
 
