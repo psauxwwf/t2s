@@ -24,8 +24,19 @@ tasks:
     cmds:
       - mkdir -p {{.bin}}
 
+  debug:
+    desc: Debug build
+    deps: [setup]
+    silent: true
+    cmds:
+      - >
+        {{.gobin}} build
+        -tags netgo
+        -gcflags "all=-N -l"
+        -o {{.app_bin}}_debug cmd/{{.app}}/main.go
+
   build:
-    desc: Build application
+    desc: Common build
     deps: [setup]
     silent: true
     cmds:
@@ -46,10 +57,6 @@ tasks:
     silent: true
     cmds:
       - sudo {{.bin}}/{{.app}} -config config.override.yaml
-      # - scp {{.app_bin}} {{.remote_user}}@{{.remote_host}}:{{.remote_dir}}
-      # - scp config.override.yaml {{.remote_user}}@{{.remote_host}}:{{.remote_dir}}
-      # Uncomment the following line to run the app remotely
-      # - ssh {{.remote_user}}@{{.remote_host}} 'sudo {{.remote_dir}}/{{.app}} -config config.override.yaml'
 
   test-remote:
     desc: Run on remote with scp
@@ -58,7 +65,7 @@ tasks:
     cmds:
       - scp {{.app_bin}} {{.remote_user}}@{{.remote_host}}:{{.remote_dir}}
       - scp config.override.yaml {{.remote_user}}@{{.remote_host}}:{{.remote_dir}}
-      - ssh {{.remote_user}}@{{.remote_host}} 'sudo {{.remote_dir}}/{{.app}} -config config.override.yaml'
+      # - ssh {{.remote_user}}@{{.remote_host}} 'sudo {{.remote_dir}}/{{.app}} -config config.override.yaml'
 
   dns:
     desc: Build and deploy DNS tool

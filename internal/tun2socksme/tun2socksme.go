@@ -7,6 +7,7 @@ import (
 	"os/signal"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 
 	"tun2socksme/internal/config"
@@ -15,6 +16,12 @@ import (
 
 	"tun2socksme/pkg/shell"
 )
+
+func lockf(m *sync.Mutex, f func() error) error {
+	m.Lock()
+	defer m.Unlock()
+	return f()
+}
 
 type Gateway struct {
 	device  string
@@ -26,8 +33,10 @@ type Tun2socksme struct {
 	dns     *dns.Dns
 	defgate *Gateway
 	exclude []string
-	metric  int
 	routes  []string
+	metric  int
+
+	m sync.Mutex
 }
 
 func New(
@@ -57,32 +66,37 @@ func New(
 	}, nil
 }
 
-func (t *Tun2socksme) Run() error {
-	if err := t.Prepare(); err != nil {
+func (t *Tun2socksme) Run(sigch chan os.Signal) error {
+	signal.Notify(sigch, syscall.SIGINT, syscall.SIGTERM)
+
+	if err := lockf(&t.m, t.Prepare); err != nil {
 		return fmt.Errorf("prepare error: %w", err)
 	}
 
-	var (
-		errch = t.tun.Run()
-		sigch = make(chan os.Signal, 1)
-	)
+	defer func() {
+		if err := t.Shutdown(); err != nil {
+			log.Println(err)
+		}
+	}()
 
-	if err := t.Defgate(); err != nil {
-		return fmt.Errorf("default route to proxy error: %w", err)
-	}
+	errch := t.tun.Run()
 
 	go func() {
 		if err := t.dns.Run(); err != nil {
 			errch <- fmt.Errorf("dns fatal error: %w", err)
 		}
 	}()
+	go func() {
+		if err := t.Defgate(); err != nil {
+			errch <- fmt.Errorf("default route to proxy error: %w", err)
+		}
+	}()
 
-	signal.Notify(sigch, syscall.SIGINT, syscall.SIGTERM)
 	select {
-	case sig := <-sigch:
-		return fmt.Errorf("received shutdown signal: %s", sig)
 	case err := <-errch:
-		return fmt.Errorf("tun2socks error: %w", err)
+		return fmt.Errorf("fatal error: %s", err)
+	case sig := <-sigch:
+		return fmt.Errorf("recieve: %v", sig)
 	}
 }
 
@@ -90,23 +104,28 @@ func (t *Tun2socksme) Prepare() error {
 	if err := t.disableRP(); err != nil {
 		log.Printf("rp error: %v", err)
 	}
-	if err := t.setExcludeNets(); err != nil {
+	if err := t.addRoutes(); err != nil {
 		return fmt.Errorf("route error: %w", err)
 	}
 	return nil
 }
 
-func (t *Tun2socksme) Shutdown() {
+func (t *Tun2socksme) Shutdown() (err error) {
 	var funcs = []func() error{
 		t.deleteRoutes,
-		t.tun.Stop,
 		t.dns.Stop,
+		t.tun.Stop,
 	}
 	for _, f := range funcs {
-		if err := f(); err != nil {
-			log.Println(err)
+		if _err := lockf(&t.m, f); _err != nil {
+			if err != nil {
+				err = fmt.Errorf("%w: %w", err, _err)
+				continue
+			}
+			err = _err
 		}
 	}
+	return
 }
 
 func (t *Tun2socksme) Defgate() error {
@@ -135,7 +154,7 @@ func (t *Tun2socksme) customRouteFunc(action string) error {
 	return nil
 }
 
-func (t *Tun2socksme) setExcludeNets() error {
+func (t *Tun2socksme) addRoutes() error {
 	for _, net := range t.exclude {
 		if _, err := shell.New("ip", "ro", "add", net, "via", t.defgate.address, "dev", t.defgate.device).Run(); err != nil {
 			return fmt.Errorf("failed to set route %s via %s", net, t.defgate.device)
@@ -213,8 +232,8 @@ func getDefgate(iprosh []string) *Gateway {
 
 func getTun(_config *config.Config) (tun.Tunnable, error) {
 	var m = map[string]func(*config.Config) (tun.Tunnable, error){
-		config.Socks: tun.Socks,
-		config.Ssh:   tun.Ssh,
+		config.SocksType: tun.Socks,
+		config.SshType:   tun.Ssh,
 	}
 
 	if f, ok := m[_config.Proxy.Type]; ok {

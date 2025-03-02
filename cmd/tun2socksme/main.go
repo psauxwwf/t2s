@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"log"
+	"os"
 	"tun2socksme/internal/config"
 	"tun2socksme/internal/dns"
 	"tun2socksme/internal/tun2socksme"
@@ -37,9 +38,7 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	defer _tun2socksme.Shutdown()
-
-	if err := _tun2socksme.Run(); err != nil {
+	if err := _tun2socksme.Run(make(chan os.Signal, 1)); err != nil {
 		log.Println(err)
 	}
 }

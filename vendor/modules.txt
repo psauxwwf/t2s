@@ -1,34 +1,67 @@
-# github.com/BurntSushi/toml v1.2.1
-## explicit; go 1.16
+# github.com/BurntSushi/toml v1.4.1-0.20240526193622-a339e1f7089c
+## explicit; go 1.18
 github.com/BurntSushi/toml
 github.com/BurntSushi/toml/internal
-# github.com/Dreamacro/go-shadowsocks2 v0.1.8
-## explicit; go 1.17
-github.com/Dreamacro/go-shadowsocks2/core
-github.com/Dreamacro/go-shadowsocks2/shadowaead
-github.com/Dreamacro/go-shadowsocks2/shadowstream
 # github.com/ajg/form v1.5.1
 ## explicit
 github.com/ajg/form
+# github.com/devil666face/tun2socks v0.0.0-20250301224203-b3709862bf07
+## explicit; go 1.23.1
+github.com/devil666face/tun2socks/buffer
+github.com/devil666face/tun2socks/buffer/allocator
+github.com/devil666face/tun2socks/core
+github.com/devil666face/tun2socks/core/adapter
+github.com/devil666face/tun2socks/core/device
+github.com/devil666face/tun2socks/core/device/fdbased
+github.com/devil666face/tun2socks/core/device/iobased
+github.com/devil666face/tun2socks/core/device/tun
+github.com/devil666face/tun2socks/core/option
+github.com/devil666face/tun2socks/dialer
+github.com/devil666face/tun2socks/engine
+github.com/devil666face/tun2socks/internal/pool
+github.com/devil666face/tun2socks/internal/version
+github.com/devil666face/tun2socks/log
+github.com/devil666face/tun2socks/metadata
+github.com/devil666face/tun2socks/proxy
+github.com/devil666face/tun2socks/proxy/proto
+github.com/devil666face/tun2socks/restapi
+github.com/devil666face/tun2socks/transport/internal/bufferpool
+github.com/devil666face/tun2socks/transport/shadowsocks/core
+github.com/devil666face/tun2socks/transport/shadowsocks/shadowaead
+github.com/devil666face/tun2socks/transport/shadowsocks/shadowstream
+github.com/devil666face/tun2socks/transport/simple-obfs
+github.com/devil666face/tun2socks/transport/socks4
+github.com/devil666face/tun2socks/transport/socks5
+github.com/devil666face/tun2socks/tunnel
+github.com/devil666face/tun2socks/tunnel/statistic
 # github.com/docker/go-units v0.5.0
 ## explicit
 github.com/docker/go-units
-# github.com/go-chi/chi/v5 v5.0.8
-## explicit; go 1.14
+# github.com/go-chi/chi/v5 v5.2.1
+## explicit; go 1.20
 github.com/go-chi/chi/v5
 # github.com/go-chi/cors v1.2.1
 ## explicit; go 1.14
 github.com/go-chi/cors
-# github.com/go-chi/render v1.0.2
+# github.com/go-chi/render v1.0.3
 ## explicit; go 1.16
 github.com/go-chi/render
-# github.com/google/btree v1.1.2
+# github.com/go-gost/relay v0.5.0
+## explicit; go 1.16
+github.com/go-gost/relay
+# github.com/google/btree v1.1.3
 ## explicit; go 1.18
 github.com/google/btree
-# github.com/google/uuid v1.3.0
+# github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
+## explicit; go 1.13
+github.com/google/shlex
+# github.com/google/uuid v1.6.0
 ## explicit
 github.com/google/uuid
-# github.com/gorilla/websocket v1.5.0
+# github.com/gorilla/schema v1.4.1
+## explicit; go 1.20
+github.com/gorilla/schema
+# github.com/gorilla/websocket v1.5.3
 ## explicit; go 1.12
 github.com/gorilla/websocket
 # github.com/ilyakaznacheev/cleanenv v1.5.0
@@ -37,74 +70,64 @@ github.com/ilyakaznacheev/cleanenv
 # github.com/joho/godotenv v1.5.1
 ## explicit; go 1.12
 github.com/joho/godotenv
-# github.com/miekg/dns v1.1.62
+# github.com/kr/pretty v0.1.0
+## explicit
+# github.com/miekg/dns v1.1.63
 ## explicit; go 1.19
 github.com/miekg/dns
-# github.com/sirupsen/logrus v1.9.3
-## explicit; go 1.13
-github.com/sirupsen/logrus
-# github.com/xjasonlyu/tun2socks/v2 v2.5.2
-## explicit; go 1.20
-github.com/xjasonlyu/tun2socks/v2/common/observable
-github.com/xjasonlyu/tun2socks/v2/common/pool
-github.com/xjasonlyu/tun2socks/v2/core
-github.com/xjasonlyu/tun2socks/v2/core/adapter
-github.com/xjasonlyu/tun2socks/v2/core/device
-github.com/xjasonlyu/tun2socks/v2/core/device/fdbased
-github.com/xjasonlyu/tun2socks/v2/core/device/iobased
-github.com/xjasonlyu/tun2socks/v2/core/device/tun
-github.com/xjasonlyu/tun2socks/v2/core/option
-github.com/xjasonlyu/tun2socks/v2/dialer
-github.com/xjasonlyu/tun2socks/v2/engine
-github.com/xjasonlyu/tun2socks/v2/engine/mirror
-github.com/xjasonlyu/tun2socks/v2/internal/version
-github.com/xjasonlyu/tun2socks/v2/log
-github.com/xjasonlyu/tun2socks/v2/metadata
-github.com/xjasonlyu/tun2socks/v2/proxy
-github.com/xjasonlyu/tun2socks/v2/proxy/proto
-github.com/xjasonlyu/tun2socks/v2/restapi
-github.com/xjasonlyu/tun2socks/v2/transport/simple-obfs
-github.com/xjasonlyu/tun2socks/v2/transport/socks4
-github.com/xjasonlyu/tun2socks/v2/transport/socks5
-github.com/xjasonlyu/tun2socks/v2/tunnel
-github.com/xjasonlyu/tun2socks/v2/tunnel/statistic
 # go.uber.org/atomic v1.11.0
 ## explicit; go 1.18
 go.uber.org/atomic
-# golang.org/x/crypto v0.25.0
+# go.uber.org/automaxprocs v1.6.0
 ## explicit; go 1.20
+# go.uber.org/multierr v1.11.0
+## explicit; go 1.19
+go.uber.org/multierr
+# go.uber.org/zap v1.27.0
+## explicit; go 1.19
+go.uber.org/zap
+go.uber.org/zap/buffer
+go.uber.org/zap/internal
+go.uber.org/zap/internal/bufferpool
+go.uber.org/zap/internal/color
+go.uber.org/zap/internal/exit
+go.uber.org/zap/internal/pool
+go.uber.org/zap/internal/stacktrace
+go.uber.org/zap/zapcore
+# golang.org/x/crypto v0.35.0
+## explicit; go 1.23.0
 golang.org/x/crypto/chacha20
 golang.org/x/crypto/chacha20poly1305
 golang.org/x/crypto/hkdf
 golang.org/x/crypto/internal/alias
 golang.org/x/crypto/internal/poly1305
-# golang.org/x/mod v0.18.0
-## explicit; go 1.18
+# golang.org/x/mod v0.21.0
+## explicit; go 1.22.0
 golang.org/x/mod/semver
-# golang.org/x/net v0.27.0
+# golang.org/x/net v0.35.0
 ## explicit; go 1.18
 golang.org/x/net/bpf
 golang.org/x/net/internal/iana
 golang.org/x/net/internal/socket
 golang.org/x/net/ipv4
 golang.org/x/net/ipv6
-# golang.org/x/sync v0.7.0
+# golang.org/x/sync v0.8.0
 ## explicit; go 1.18
 golang.org/x/sync/errgroup
-# golang.org/x/sys v0.22.0
+# golang.org/x/sys v0.30.0
 ## explicit; go 1.18
 golang.org/x/sys/cpu
 golang.org/x/sys/unix
 golang.org/x/sys/windows
-# golang.org/x/time v0.3.0
-## explicit
+# golang.org/x/time v0.10.0
+## explicit; go 1.18
 golang.org/x/time/rate
-# golang.org/x/tools v0.22.0
-## explicit; go 1.19
+# golang.org/x/tools v0.26.0
+## explicit; go 1.22.0
 golang.org/x/tools/go/gcexportdata
-golang.org/x/tools/go/internal/packagesdriver
 golang.org/x/tools/go/packages
 golang.org/x/tools/go/types/objectpath
+golang.org/x/tools/go/types/typeutil
 golang.org/x/tools/internal/aliases
 golang.org/x/tools/internal/event
 golang.org/x/tools/internal/event/core
@@ -115,23 +138,25 @@ golang.org/x/tools/internal/gocommand
 golang.org/x/tools/internal/packagesinternal
 golang.org/x/tools/internal/pkgbits
 golang.org/x/tools/internal/stdlib
-golang.org/x/tools/internal/tokeninternal
+golang.org/x/tools/internal/typeparams
 golang.org/x/tools/internal/typesinternal
 golang.org/x/tools/internal/versions
 # golang.zx2c4.com/wintun v0.0.0-20230126152724-0fa3db229ce2
 ## explicit; go 1.17
 golang.zx2c4.com/wintun
-# golang.zx2c4.com/wireguard v0.0.0-20230325221338-052af4a8072b
+# golang.zx2c4.com/wireguard v0.0.0-20231211153847-12269c276173
 ## explicit; go 1.20
 golang.zx2c4.com/wireguard/conn
 golang.zx2c4.com/wireguard/conn/winrio
 golang.zx2c4.com/wireguard/rwcancel
 golang.zx2c4.com/wireguard/tun
+# gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127
+## explicit
 # gopkg.in/yaml.v3 v3.0.1
 ## explicit
 gopkg.in/yaml.v3
-# gvisor.dev/gvisor v0.0.0-20230603040744-5c9219dedd33
-## explicit; go 1.20
+# gvisor.dev/gvisor v0.0.0-20250215002057-313350f3e697
+## explicit; go 1.23.1
 gvisor.dev/gvisor/pkg/abi/linux/errno
 gvisor.dev/gvisor/pkg/atomicbitops
 gvisor.dev/gvisor/pkg/bits
@@ -145,6 +170,7 @@ gvisor.dev/gvisor/pkg/goid
 gvisor.dev/gvisor/pkg/linewriter
 gvisor.dev/gvisor/pkg/log
 gvisor.dev/gvisor/pkg/rand
+gvisor.dev/gvisor/pkg/rawfile
 gvisor.dev/gvisor/pkg/refs
 gvisor.dev/gvisor/pkg/sleep
 gvisor.dev/gvisor/pkg/state
@@ -162,7 +188,6 @@ gvisor.dev/gvisor/pkg/tcpip/link/channel
 gvisor.dev/gvisor/pkg/tcpip/link/fdbased
 gvisor.dev/gvisor/pkg/tcpip/link/nested
 gvisor.dev/gvisor/pkg/tcpip/link/packetsocket
-gvisor.dev/gvisor/pkg/tcpip/link/rawfile
 gvisor.dev/gvisor/pkg/tcpip/link/stopfd
 gvisor.dev/gvisor/pkg/tcpip/link/tun
 gvisor.dev/gvisor/pkg/tcpip/network/hash
@@ -174,6 +199,7 @@ gvisor.dev/gvisor/pkg/tcpip/network/ipv6
 gvisor.dev/gvisor/pkg/tcpip/ports
 gvisor.dev/gvisor/pkg/tcpip/seqnum
 gvisor.dev/gvisor/pkg/tcpip/stack
+gvisor.dev/gvisor/pkg/tcpip/stack/gro
 gvisor.dev/gvisor/pkg/tcpip/transport
 gvisor.dev/gvisor/pkg/tcpip/transport/icmp
 gvisor.dev/gvisor/pkg/tcpip/transport/internal/network

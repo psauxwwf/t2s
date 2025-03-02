@@ -12,15 +12,18 @@ interface:
   #   - "192.168.200.53 via 192.168.200.1 dev virbr0"
 
 socks:
+  proto: "socks5" # socks5/ss/relay
   username: "username"
   password: "password"
   host: "127.0.0.1"
   port: 9050
+  extra: ""
 
 ssh:
   username: "user"
   host: "192.168.1.1"
   port: 22
+  extra: ""
 
 # warning: udp not route to proxy, tun2socksme route only tcp
 dns:
