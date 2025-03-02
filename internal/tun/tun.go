@@ -12,9 +12,9 @@ import (
 
 type Tunnable interface {
 	Run() chan error
-	Stop() error
-	Host() string
 	Device() string
+	Host() string
+	Stop() error
 }
 
 type Tun struct {
@@ -23,8 +23,8 @@ type Tun struct {
 	device string
 }
 
-func (t *Tun) Host() string   { return t.host }
 func (t *Tun) Device() string { return t.device }
+func (t *Tun) Host() string   { return t.host }
 
 func New(
 	_device string,
@@ -52,6 +52,7 @@ func (t Tun) Run() chan error {
 
 	net.DefaultResolver.PreferGo = true
 	net.DefaultResolver.Dial = dialer.DialContext
+
 	engine.Insert(t.engine)
 	if err := engine.Start(); err != nil {
 		errch <- fmt.Errorf("fatal error in interface engine: %w", err)
