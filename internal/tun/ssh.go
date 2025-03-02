@@ -26,9 +26,7 @@ func wrapSsh(
 	}
 }
 
-func (s *ssh) Host() string {
-	return s.host
-}
+func (s *ssh) Host() string { return s.host }
 
 func Ssh(_config *config.Config) (Tunnable, error) {
 	return wrapSsh(

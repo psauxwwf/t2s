@@ -1,6 +1,8 @@
 package net
 
-import "net"
+import (
+	"net"
+)
 
 func RandomPort() (int, error) {
 	listener, err := net.Listen("tcp", ":0")
