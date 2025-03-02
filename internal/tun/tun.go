@@ -4,15 +4,17 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/xjasonlyu/tun2socks/v2/dialer"
-	"github.com/xjasonlyu/tun2socks/v2/engine"
+	// "github.com/xjasonlyu/tun2socks/v2/dialer"
+	// "github.com/xjasonlyu/tun2socks/v2/engine"
+	"github.com/devil666face/tun2socks/dialer"
+	"github.com/devil666face/tun2socks/engine"
 )
 
 type Tunnable interface {
 	Run() chan error
-	Stop() error
-	Host() string
 	Device() string
+	Host() string
+	Stop() error
 }
 
 type Tun struct {
@@ -21,12 +23,13 @@ type Tun struct {
 	device string
 }
 
-func (t *Tun) Host() string   { return t.host }
 func (t *Tun) Device() string { return t.device }
+func (t *Tun) Host() string   { return t.host }
 
 func New(
 	_device string,
-	username, password, host string,
+	proto string,
+	username, password, host, args string,
 	port int,
 ) *Tun {
 	return &Tun{
@@ -34,7 +37,8 @@ func New(
 			Device:   fmt.Sprintf("tun://%s", _device),
 			LogLevel: "silent",
 			Proxy: proxy(
-				username, password, host,
+				proto,
+				username, password, host, args,
 				port,
 			),
 		},
@@ -48,6 +52,7 @@ func (t Tun) Run() chan error {
 
 	net.DefaultResolver.PreferGo = true
 	net.DefaultResolver.Dial = dialer.DialContext
+
 	engine.Insert(t.engine)
 	if err := engine.Start(); err != nil {
 		errch <- fmt.Errorf("fatal error in interface engine: %w", err)
@@ -64,13 +69,17 @@ func (t Tun) Stop() error {
 }
 
 func proxy(
-	username, password, host string,
+	proto string,
+	username, password, host, args string,
 	port int,
 ) string {
-	var s = "socks5://"
+	var s = fmt.Sprintf("%s://", proto)
 	if username != "" && password != "" {
 		s += fmt.Sprintf("%s:%s@", username, password)
 	}
 	s += fmt.Sprintf("%s:%d", host, port)
+	if args != "" {
+		s += fmt.Sprintf("/%s", args)
+	}
 	return s
 }
