@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	configpath = flag.String("config", "config.yaml", "path to config")
+	configpath = flag.String("config", "", "path to config")
 )
 
 func main() {

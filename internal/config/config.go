@@ -4,11 +4,17 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/user"
+	"path/filepath"
 	"tun2socksme/pkg/fs"
 	"tun2socksme/pkg/net"
 
 	"github.com/ilyakaznacheev/cleanenv"
 	"gopkg.in/yaml.v3"
+)
+
+const (
+	config = "config.yaml"
 )
 
 const (
@@ -113,10 +119,24 @@ var _default = Config{
 	},
 }
 
+func defaultPath() string {
+	if xdg := os.Getenv("XDG_CONFIG_HOME"); xdg != "" {
+		return filepath.Join(xdg, config)
+	}
+	if _user, err := user.Current(); err == nil {
+		return filepath.Join(_user.HomeDir, ".config", "tun2socksme", config)
+	}
+	return ""
+}
+
 func New(filename string) (*Config, error) {
+	if filename == "" {
+		filename = defaultPath()
+	}
+	log.Println("read config:", filename)
+
 	port, err := net.RandomPort()
 	if err != nil {
-		log.Println("failed to get port for local ssh tunnel")
 		port = 31888
 	}
 	_config := Config{Ssh: sshConfig{LocalPort: port}}
@@ -126,13 +146,14 @@ func New(filename string) (*Config, error) {
 			if err := _default.Save(filename); err != nil {
 				log.Println("default config error: %w", err)
 			}
-			return &_default, fmt.Errorf("config not exists: %w", err)
+			return &_default, fmt.Errorf("use default path to config: %s", filename)
 		}
 		return nil, fmt.Errorf("failed to load config: %w", err)
 	}
-	// if !protoContains(_config.Socks.Proto) {
-	// 	return &_default, ErrProtoConains
-	// }
+
+	if !protoContains(_config.Socks.Proto) {
+		return &_default, ErrProtoConains
+	}
 	return &_config, nil
 }
 
@@ -140,6 +161,9 @@ func (c *Config) Save(path string) error {
 	data, err := yaml.Marshal(&c)
 	if err != nil {
 		return fmt.Errorf("failed to marshall config: %w", err)
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o644); err != nil {
+		return fmt.Errorf("failed to save default config: %w", err)
 	}
 	if err := fs.WriteFile(path, data); err != nil {
 		return fmt.Errorf("failed to save default config: %w", err)
