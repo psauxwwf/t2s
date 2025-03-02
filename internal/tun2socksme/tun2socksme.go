@@ -3,9 +3,12 @@ package tun2socksme
 import (
 	"fmt"
 	"log"
+	"os"
+	"os/signal"
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 
 	"tun2socksme/internal/config"
 	"tun2socksme/internal/dns"
@@ -63,7 +66,9 @@ func New(
 	}, nil
 }
 
-func (t *Tun2socksme) Run() error {
+func (t *Tun2socksme) Run(sigch chan os.Signal) error {
+	signal.Notify(sigch, syscall.SIGINT, syscall.SIGTERM)
+
 	if err := lockf(&t.m, t.Prepare); err != nil {
 		return fmt.Errorf("prepare error: %w", err)
 	}
@@ -87,7 +92,12 @@ func (t *Tun2socksme) Run() error {
 		}
 	}()
 
-	return fmt.Errorf("fatal error: %s", <-errch)
+	select {
+	case err := <-errch:
+		return fmt.Errorf("fatal error: %s", err)
+	case sig := <-sigch:
+		return fmt.Errorf("recieve: %v", sig)
+	}
 }
 
 func (t *Tun2socksme) Prepare() error {
