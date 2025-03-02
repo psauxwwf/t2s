@@ -64,7 +64,7 @@ func (m *manager) Revert() error {
 		}
 	}
 	if err := os.Symlink(m.link, respath); err != nil {
-		log.Fatalf("error creating symlink: %v", err)
+		return fmt.Errorf("error creating symlink: %v", err)
 	}
 	if err := fs.WriteFile(respath, m.currentconf); err != nil {
 		return fmt.Errorf("resolvconf error: %w", err)
@@ -73,6 +73,9 @@ func (m *manager) Revert() error {
 		if _, err := shell.New("resolvectl", "revert", i).Run(); err != nil {
 			return fmt.Errorf("failed to revert dns for %s: %w", i, err)
 		}
+	}
+	if _, err := shell.New("systemctl", "restart", "systemd-resolved").Run(); err != nil {
+		return fmt.Errorf("failed to restart dns: %w", err)
 	}
 	return nil
 }

@@ -153,4 +153,12 @@ dns:
 
 ---
 
+### Repait systemd-resolved if symlink deleted
+
+```bash
+sudo ln -sf /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf
+```
+
+---
+
 - https://github.com/xjasonlyu/tun2socks/wiki/Proxy-Models
