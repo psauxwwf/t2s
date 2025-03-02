@@ -3,6 +3,7 @@ package dns
 import (
 	"fmt"
 	"log"
+	"os"
 	"path/filepath"
 	"regexp"
 
@@ -22,6 +23,7 @@ nameserver %s
 
 type manager struct {
 	listen      string
+	link        string
 	currentconf []byte
 }
 
@@ -30,13 +32,20 @@ func Manager(_listen string) (*manager, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to read: %w", err)
 	}
+	_link, _ := fs.CheckSymlink(respath)
 	return &manager{
 		listen:      _listen,
 		currentconf: _currentconf,
+		link:        _link,
 	}, nil
 }
 
 func (m *manager) Set() error {
+	if m.link != "" {
+		if err := os.RemoveAll(respath); err != nil {
+			return fmt.Errorf("failed to unlink %s: %w", respath, err)
+		}
+	}
 	if err := render(respath, resolvconf, m.listen); err != nil {
 		return fmt.Errorf("resolvconf error: %w", err)
 	}
@@ -49,6 +58,14 @@ func (m *manager) Set() error {
 }
 
 func (m *manager) Revert() error {
+	if m.link != "" {
+		if err := os.RemoveAll(respath); err != nil {
+			return fmt.Errorf("failed to unlink %s: %w", respath, err)
+		}
+	}
+	if err := os.Symlink(m.link, respath); err != nil {
+		log.Fatalf("error creating symlink: %v", err)
+	}
 	if err := fs.WriteFile(respath, m.currentconf); err != nil {
 		return fmt.Errorf("resolvconf error: %w", err)
 	}
