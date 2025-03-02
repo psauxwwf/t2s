@@ -4,8 +4,6 @@ import (
 	"flag"
 	"log"
 	"os"
-	"os/signal"
-	"syscall"
 	"tun2socksme/internal/config"
 	"tun2socksme/internal/dns"
 	"tun2socksme/internal/tun2socksme"
@@ -40,12 +38,7 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	sigch := make(chan os.Signal, 1)
-	signal.Notify(sigch, syscall.SIGINT, syscall.SIGTERM)
-
-	if err := _tun2socksme.Run(); err != nil {
+	if err := _tun2socksme.Run(make(chan os.Signal, 1)); err != nil {
 		log.Println(err)
 	}
-	// _tun2socksme.Shutdown()
-	<-sigch
 }
