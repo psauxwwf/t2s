@@ -14,6 +14,14 @@ socks:
 
 ### Proxy to SSH
 
+```bash
+vim /etc/ssh/sshd_config
+```
+
+```bash
+AllowTcpForwarding yes
+```
+
 ```yaml
 proxy:
   type: "ssh" # socks/ssh
