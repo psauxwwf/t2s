@@ -56,7 +56,7 @@ func New(
 ) (*Dns, error) {
 	_manager, err := Manager(_listen)
 	if err != nil {
-		log.Println(err)
+		return nil, err
 	}
 	var (
 		_dns = &Dns{
