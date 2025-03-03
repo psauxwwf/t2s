@@ -1,20 +1,19 @@
-package tun2socksme
+package t2s
 
 import (
 	"fmt"
 	"log"
 	"os"
 	"os/signal"
-	"strconv"
 	"strings"
 	"sync"
 	"syscall"
 
-	"tun2socksme/internal/config"
-	"tun2socksme/internal/dns"
-	"tun2socksme/internal/tun"
+	"t2s/internal/config"
+	"t2s/internal/dns"
+	"t2s/internal/tun"
 
-	"tun2socksme/pkg/shell"
+	"t2s/pkg/shell"
 )
 
 func lockf(m *sync.Mutex, f func() error) error {
@@ -29,12 +28,11 @@ type Gateway struct {
 }
 
 type Tun2socksme struct {
+	ipro    *Ipro
 	tun     tun.Tunnable
 	dns     *dns.Dns
-	defgate *Gateway
 	exclude []string
 	routes  []string
-	metric  int
 
 	m sync.Mutex
 }
@@ -43,7 +41,7 @@ func New(
 	_config *config.Config,
 	_dns *dns.Dns,
 ) (*Tun2socksme, error) {
-	iprosh, err := getIprosh()
+	_ipro, err := getIpro(_config.Interface.Metric)
 	if err != nil {
 		return nil, err
 	}
@@ -54,30 +52,26 @@ func New(
 	}
 
 	return &Tun2socksme{
+		ipro:    _ipro,
 		tun:     _tun,
 		dns:     _dns,
 		exclude: _config.Interface.ExcludeNets,
 		routes:  _config.Interface.CustomRoutes,
-		defgate: getDefgate(iprosh),
-		metric: getMertic(
-			iprosh,
-			_config.Interface.Metric,
-		),
 	}, nil
 }
 
 func (t *Tun2socksme) Run(sigch chan os.Signal) error {
 	signal.Notify(sigch, syscall.SIGINT, syscall.SIGTERM)
 
-	if err := lockf(&t.m, t.Prepare); err != nil {
-		return fmt.Errorf("prepare error: %w", err)
-	}
-
 	defer func() {
 		if err := t.Shutdown(); err != nil {
 			log.Println(err)
 		}
 	}()
+
+	if err := lockf(&t.m, t.Prepare); err != nil {
+		return fmt.Errorf("prepare error: %w", err)
+	}
 
 	errch := t.tun.Run()
 
@@ -112,9 +106,9 @@ func (t *Tun2socksme) Prepare() error {
 
 func (t *Tun2socksme) Shutdown() (err error) {
 	var funcs = []func() error{
-		t.deleteRoutes,
 		t.dns.Stop,
 		t.tun.Stop,
+		t.deleteRoutes,
 	}
 	for _, f := range funcs {
 		if _err := lockf(&t.m, f); _err != nil {
@@ -132,7 +126,19 @@ func (t *Tun2socksme) Defgate() error {
 	if _, err := shell.New("ip", "link", "set", t.tun.Device(), "up").Run(); err != nil {
 		return fmt.Errorf("failed to up %s device: %w", t.tun.Device(), err)
 	}
-	if _, err := shell.New("ip", "route", "add", "default", "dev", t.tun.Device(), "proto", "static", "metric", fmt.Sprint(t.metric)).Run(); err != nil {
+	if !t.ipro.metricExists {
+		var args = append([]string{"route", "replace"},
+			t.ipro.s...)
+		args = append(args, "metric", fmt.Sprint(t.ipro.metric*2))
+
+		if _, err := shell.New("ip", args...).Run(); err != nil {
+			return fmt.Errorf("failed to replace def route without metric to route with metric: %w", err)
+		}
+		if _, err := shell.New("ip", append([]string{"ro", "del"}, t.ipro.s...)...).Run(); err != nil {
+			return fmt.Errorf("failed to delete previous route without metric: %w", err)
+		}
+	}
+	if _, err := shell.New("ip", "route", "add", "default", "dev", t.tun.Device(), "proto", "static", "metric", fmt.Sprint(t.ipro.metric)).Run(); err != nil {
 		return fmt.Errorf("failed to set default route via %s: %w", t.tun.Device(), err)
 	}
 	return nil
@@ -156,15 +162,17 @@ func (t *Tun2socksme) customRouteFunc(action string) error {
 
 func (t *Tun2socksme) addRoutes() error {
 	for _, net := range t.exclude {
-		if _, err := shell.New("ip", "ro", "add", net, "via", t.defgate.address, "dev", t.defgate.device).Run(); err != nil {
-			return fmt.Errorf("failed to set route %s via %s", net, t.defgate.device)
+		if _, err := shell.New("ip", "ro", "add", net, "via", t.ipro.defgate.address, "dev", t.ipro.defgate.device).Run(); err != nil {
+			return fmt.Errorf("failed to set route %s via %s", net, t.ipro.defgate.device)
 		}
 	}
 	if len(t.routes) != 0 {
-		return t.customRoutesDel()
+		if err := t.customRoutesAdd(); err != nil {
+			return fmt.Errorf("failed to set custom routes: %w", err)
+		}
 	}
-	if _, err := shell.New("ip", "ro", "add", t.tun.Host(), "via", t.defgate.address, "dev", t.defgate.device).Run(); err != nil {
-		return fmt.Errorf("failed to set route %s via %s", t.tun.Host(), t.defgate.device)
+	if _, err := shell.New("ip", "ro", "add", t.tun.Host(), "via", t.ipro.defgate.address, "dev", t.ipro.defgate.device).Run(); err != nil {
+		return fmt.Errorf("failed to set route %s via %s", t.tun.Host(), t.ipro.defgate.device)
 	}
 	return nil
 }
@@ -177,7 +185,9 @@ func (t *Tun2socksme) deleteRoutes() error {
 		}
 	}
 	if len(t.routes) != 0 {
-		return t.customRoutesAdd()
+		if err := t.customRoutesDel(); err != nil {
+			return fmt.Errorf("failed to delete custom routes: %w", err)
+		}
 	}
 	if _, _err := shell.New("ip", "ro", "del", t.tun.Host()).Run(); _err != nil {
 		err = fmt.Errorf("failed to delete route %s: %w", t.tun.Host(), _err)
@@ -189,45 +199,10 @@ func (t *Tun2socksme) disableRP() error {
 	if _, err := shell.New("sysctl", "net.ipv4.conf.all.rp_filter=0").Run(); err != nil {
 		return fmt.Errorf("failed disable rp: %w", err)
 	}
-	if _, err := shell.New("sysctl", fmt.Sprintf("net.ipv4.conf.%s.rp_filter=0", t.defgate.device)).Run(); err != nil {
+	if _, err := shell.New("sysctl", fmt.Sprintf("net.ipv4.conf.%s.rp_filter=0", t.ipro.defgate.device)).Run(); err != nil {
 		return fmt.Errorf("failed disable rp: %w", err)
 	}
 	return nil
-}
-
-func getIprosh() ([]string, error) {
-	out, err := shell.New("ip", "ro", "sh").Run()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get default gateway: %w", err)
-	}
-	if iprosh := strings.Fields(strings.TrimSpace(out)); len(iprosh) > 5 {
-		return iprosh, nil
-	}
-	return nil, fmt.Errorf("failed to get default gateway")
-}
-
-func getMertic(iprosh []string, metric int) int {
-	for i, entry := range iprosh {
-		if entry != "metric" {
-			continue
-		}
-		if i+1 >= len(iprosh) {
-			break
-		}
-		if m, err := strconv.Atoi(iprosh[i+1]); err == nil && metric >= m {
-			log.Printf("default metric %d is more then existed metric %d set metric=%d", metric, m, m/2)
-			return m / 2
-		}
-		break
-	}
-	return metric
-}
-
-func getDefgate(iprosh []string) *Gateway {
-	return &Gateway{
-		address: iprosh[2],
-		device:  iprosh[4],
-	}
 }
 
 func getTun(_config *config.Config) (tun.Tunnable, error) {
