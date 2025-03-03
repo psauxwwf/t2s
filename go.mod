@@ -1,4 +1,4 @@
-module tun2socksme
+module t2s
 
 go 1.23.4
 

@@ -6,7 +6,7 @@ vars:
   gcflags: "all=-trimpath={{.PWD}} -dwarf=false -l"
   asmflags: "all=-trimpath={{.PWD}}"
   bin: "{{.PWD}}/bin"
-  app: "tun2socksme"
+  app: "t2s"
   app_bin: "{{.bin}}/{{.app}}"
   remote_user: root
   remote_host: 192.168.200.53
