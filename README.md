@@ -151,12 +151,33 @@ dns:
     - "1.1.1.1:53/tcp"
 ```
 
+### If you run via ssh - must add exclude to your ssh connect address
+
+```bash
+ss -tunp | grep ssh
+tcp    ESTAB   0        36         85.239.54.158:56777     79.140.111.66:47284   users:(("sshd",pid=1627,fd=4))
+tcp    ESTAB   0        0          85.239.54.158:56777     79.140.111.66:47152   users:(("sshd",pid=1278,fd=4))
+```
+
+```yaml
+interface:
+  device: "tun0"
+  exclude:
+    - "79.140.111.66"
+    - "10.0.0.0/8"
+    - "172.16.0.0/12"
+    - "192.168.0.0/16"
+```
+
 ---
 
 ### Repait systemd-resolved if symlink deleted
 
 ```bash
+for in in $(ip a | grep '^[0-9]:' | cut -d ':' -f 2 | tr -d ' ' | grep -v lo); do sudo resolvectl revert $in; done
+sudo rm -f /etc/resolv.conf
 sudo ln -sf /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf
+sudo systemctl restart systemd-resolved
 ```
 
 ---
