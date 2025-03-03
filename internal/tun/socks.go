@@ -1,7 +1,7 @@
 package tun
 
 import (
-	"tun2socksme/internal/config"
+	"t2s/internal/config"
 )
 
 type socks struct {
