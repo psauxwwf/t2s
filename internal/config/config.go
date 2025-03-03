@@ -6,8 +6,8 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
-	"tun2socksme/pkg/fs"
-	"tun2socksme/pkg/net"
+	"t2s/pkg/fs"
+	"t2s/pkg/net"
 
 	"github.com/ilyakaznacheev/cleanenv"
 	"gopkg.in/yaml.v3"
@@ -124,7 +124,7 @@ func defaultPath() string {
 		return filepath.Join(xdg, config)
 	}
 	if _user, err := user.Current(); err == nil {
-		return filepath.Join(_user.HomeDir, ".config", "tun2socksme", config)
+		return filepath.Join(_user.HomeDir, ".config", "t2s", config)
 	}
 	return ""
 }

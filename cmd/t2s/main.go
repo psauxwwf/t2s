@@ -4,9 +4,9 @@ import (
 	"flag"
 	"log"
 	"os"
-	"tun2socksme/internal/config"
-	"tun2socksme/internal/dns"
-	"tun2socksme/internal/tun2socksme"
+	"t2s/internal/config"
+	"t2s/internal/dns"
+	"t2s/internal/t2s"
 )
 
 var (
@@ -30,7 +30,7 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	_tun2socksme, err := tun2socksme.New(
+	_t2s, err := t2s.New(
 		_config,
 		_dns,
 	)
@@ -38,7 +38,7 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	if err := _tun2socksme.Run(make(chan os.Signal, 1)); err != nil {
+	if err := _t2s.Run(make(chan os.Signal, 1)); err != nil {
 		log.Println(err)
 	}
 }

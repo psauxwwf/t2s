@@ -1,11 +1,11 @@
-package tun2socksme
+package t2s
 
 import (
 	"fmt"
 	"log"
 	"strconv"
 	"strings"
-	"tun2socksme/pkg/shell"
+	"t2s/pkg/shell"
 )
 
 func iprosh() (string, error) {

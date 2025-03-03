@@ -1,4 +1,4 @@
-package tun2socksme
+package t2s
 
 import (
 	"fmt"
@@ -9,11 +9,11 @@ import (
 	"sync"
 	"syscall"
 
-	"tun2socksme/internal/config"
-	"tun2socksme/internal/dns"
-	"tun2socksme/internal/tun"
+	"t2s/internal/config"
+	"t2s/internal/dns"
+	"t2s/internal/tun"
 
-	"tun2socksme/pkg/shell"
+	"t2s/pkg/shell"
 )
 
 func lockf(m *sync.Mutex, f func() error) error {
