@@ -3,8 +3,8 @@ package tun
 import (
 	"fmt"
 	"strings"
-	"tun2socksme/internal/config"
-	"tun2socksme/pkg/shell"
+	"t2s/internal/config"
+	"t2s/pkg/shell"
 )
 
 type ssh struct {
