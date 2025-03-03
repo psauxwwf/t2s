@@ -167,7 +167,9 @@ func (t *Tun2socksme) addRoutes() error {
 		}
 	}
 	if len(t.routes) != 0 {
-		return t.customRoutesAdd()
+		if err := t.customRoutesAdd(); err != nil {
+			return fmt.Errorf("failed to set custom routes: %w", err)
+		}
 	}
 	if _, err := shell.New("ip", "ro", "add", t.tun.Host(), "via", t.ipro.defgate.address, "dev", t.ipro.defgate.device).Run(); err != nil {
 		return fmt.Errorf("failed to set route %s via %s", t.tun.Host(), t.ipro.defgate.device)
@@ -183,7 +185,9 @@ func (t *Tun2socksme) deleteRoutes() error {
 		}
 	}
 	if len(t.routes) != 0 {
-		return t.customRoutesDel()
+		if err := t.customRoutesDel(); err != nil {
+			return fmt.Errorf("failed to delete custom routes: %w", err)
+		}
 	}
 	if _, _err := shell.New("ip", "ro", "del", t.tun.Host()).Run(); _err != nil {
 		err = fmt.Errorf("failed to delete route %s: %w", t.tun.Host(), _err)
