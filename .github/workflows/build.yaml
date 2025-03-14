@@ -20,7 +20,7 @@ jobs:
           go-version: "1.23"
 
       - name: run
-        run: sudo apt-get install tar curl -y && sudo /bin/sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b /usr/bin && task relese
+        run: sudo apt-get install tar curl -y && sudo /bin/sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b /usr/bin && task release
 
       - name: set tag
         run: echo "GITHUB_RELEASE_TAG=$(date +v%m.%d.%H)" >> $GITHUB_ENV
