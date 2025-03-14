@@ -1,0 +1,6 @@
+FROM golang:1.23.7
+RUN ln -snf /usr/share/zoneinfo/$CONTAINER_TIMEZONE /etc/localtime && echo $CONTAINER_TIMEZONE > /etc/timezone && \
+  sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b /usr/bin
+WORKDIR /build
+COPY . .
+CMD ["task","in-docker-build"]
