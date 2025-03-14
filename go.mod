@@ -1,6 +1,6 @@
 module t2s
 
-go 1.23.4
+go 1.23
 
 require (
 	github.com/devil666face/tun2socks v0.0.0-20250301224203-b3709862bf07

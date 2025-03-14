@@ -1,0 +1,9 @@
+services:
+  t2s:
+    build:
+      context: .
+      dockerfile: Dockerfile.build
+    image: t2s:go
+    volumes:
+      - ./bin:/build/bin
+    container_name: t2s-go
