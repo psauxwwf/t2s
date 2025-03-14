@@ -16,16 +16,17 @@ env:
   CGO_ENABLED: 0
   GOARCH: amd64
   GOOS: linux
+  COMPOSE_BAKE: true
 
 tasks:
   setup:
-    desc: Set up the environment
+    desc: set up the environment
     silent: true
     cmds:
       - mkdir -p {{.bin}}
 
   debug:
-    desc: Debug build
+    desc: debug build
     deps: [setup]
     silent: true
     cmds:
@@ -36,7 +37,7 @@ tasks:
         -o {{.app_bin}}_debug cmd/{{.app}}/main.go
 
   build:
-    desc: Common build
+    desc: common build
     deps: [setup]
     silent: true
     cmds:
@@ -50,6 +51,27 @@ tasks:
         -o {{.app_bin}} cmd/{{.app}}/main.go
       - strip {{.app_bin}}
       - objcopy --strip-unneeded {{.app_bin}}
+
+  release:
+    desc: release
+    deps: [build]
+    silent: false
+    cmds:
+      - rm -rf {{.app_bin}}_linux_amd64.tar.gz
+      - tar -cvzf {{.app_bin}}_linux_amd64.tar.gz -C {{.bin}} $(find {{.bin}} -maxdepth 1 -type f -printf "%f ")
+
+  in-docker-build:
+    deps: [build]
+    silent: false
+    cmds:
+      - mv {{.app_bin}} /build/bin
+
+  docker.build:
+    desc: build bin via docker
+    deps: [setup]
+    silent: false
+    cmds:
+      - docker compose -f docker-compose.build.yaml up --build --force-recreate
 
   test:
     desc: Build and run
@@ -66,18 +88,3 @@ tasks:
       - scp {{.app_bin}} {{.remote_user}}@{{.remote_host}}:{{.remote_dir}}
       - scp config.override.yaml {{.remote_user}}@{{.remote_host}}:{{.remote_dir}}
       # - ssh {{.remote_user}}@{{.remote_host}} 'sudo {{.remote_dir}}/{{.app}} -config config.override.yaml'
-
-  dns:
-    desc: Build and deploy DNS tool
-    deps: [setup]
-    cmds:
-      - >
-        {{.gobin}} build 
-        -ldflags="{{.ldflags}}" 
-        -trimpath 
-        -gcflags="{{.gcflags}}" 
-        -asmflags="{{.asmflags}}" 
-        -o {{.bin}}/dns dns.go
-      - strip {{.bin}}/dns
-      - objcopy --strip-unneeded {{.bin}}/dns
-      - scp {{.bin}}/dns {{.remote_user}}@{{.remote_host}}:{{.remote_dir}}
