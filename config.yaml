@@ -31,8 +31,17 @@ dns:
   listen: "127.1.1.53"
   render: true
   resolvers:
-    # - "127.1.2.53:53/tcp"
-    - "1.1.1.1:53/tcp"
-    # - "10.10.10.1:53/udp"
+    # - ip: "127.1.2.53"
+    #   port: 53
+    #   proto: tcp
+    #   rule: ""
+    - ip: "1.1.1.1"
+      port: 53
+      proto: tcp
+      rule: ""
+    # - ip: "10.10.10.1"
+    #   port: 53
+    #   proto: udp
+    #   rule: ""
   records:
     test.lan: "10.10.10.10"
