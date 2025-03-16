@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"regexp"
 	"strings"
 	"sync"
+	"t2s/internal/config"
 
 	"github.com/miekg/dns"
 )
@@ -21,7 +23,7 @@ func lockf(m *sync.Mutex, f func() error) error {
 
 type Dns struct {
 	listen    string
-	resolvers []server
+	resolvers []config.Resolver
 	render    bool
 	server    *dns.Server
 	records   map[string]string
@@ -30,9 +32,13 @@ type Dns struct {
 	m sync.Mutex
 }
 
+func withoutDot(s string) string {
+	return strings.TrimSuffix(strings.ToLower(s), ".")
+}
+
 func (d *Dns) resolveCustom(w dns.ResponseWriter, r *dns.Msg) error {
 	for _, q := range r.Question {
-		domain := strings.TrimSuffix(strings.ToLower(q.Name), ".")
+		domain := withoutDot(q.Name)
 		if ip, found := d.records[domain]; found && q.Qtype == dns.TypeA {
 			message := new(dns.Msg)
 			message.SetReply(r)
@@ -46,11 +52,25 @@ func (d *Dns) resolveCustom(w dns.ResponseWriter, r *dns.Msg) error {
 	return ErrResolveFailed
 }
 
+func matchRule(re *regexp.Regexp, r *dns.Msg) error {
+	for _, q := range r.Question {
+		if !re.MatchString(withoutDot(q.Name)) {
+			return fmt.Errorf("not mathced for rule")
+		}
+	}
+	return nil
+}
+
 func (d *Dns) resolveExchange(w dns.ResponseWriter, r *dns.Msg) error {
 	client := &dns.Client{}
 	for _, resolver := range d.resolvers {
-		client.Net = resolver.proto
-		resp, _, err := client.Exchange(r, fmt.Sprintf("%s:%s", resolver.address, resolver.port))
+
+		if err := matchRule(resolver.Re, r); err != nil {
+			return err
+		}
+
+		client.Net = resolver.Proto
+		resp, _, err := client.Exchange(r, fmt.Sprintf("%s:%d", resolver.IP, resolver.Port))
 		if err != nil {
 			continue
 		}
@@ -94,10 +114,10 @@ func (d *Dns) resolv(w dns.ResponseWriter, r *dns.Msg) {
 	// 	}
 	// 	return
 	// }
-	if err := d.resolveExchange(w, r); err == nil {
+	if err := d.resolveCustom(w, r); err == nil {
 		return
 	}
-	if err := d.resolveCustom(w, r); err == nil {
+	if err := d.resolveExchange(w, r); err == nil {
 		return
 	}
 	dns.HandleFailed(w, r)
@@ -105,7 +125,7 @@ func (d *Dns) resolv(w dns.ResponseWriter, r *dns.Msg) {
 
 func New(
 	_listen string,
-	_resolvers []string,
+	_resolvers []config.Resolver,
 	_resolvconfRender bool,
 	_records map[string]string,
 ) (*Dns, error) {
@@ -115,7 +135,7 @@ func New(
 	}
 	var (
 		_dns = &Dns{
-			resolvers: parseResolvers(_resolvers),
+			resolvers: _resolvers,
 			render:    _resolvconfRender,
 			listen:    _listen,
 			records:   _records,

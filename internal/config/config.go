@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"regexp"
 	"t2s/pkg/fs"
 	"t2s/pkg/net"
 
@@ -85,8 +86,16 @@ type chiselConfig struct {
 type dnsConfig struct {
 	Listen    string            `yaml:"listen" env-description:"listen local dns" env-default:"127.1.1.53"`
 	Render    *bool             `yaml:"render" env-description:"render resolvconf on local dns" env-default:"true"`
-	Resolvers []string          `yaml:"resolvers" env-description:"dns resolvers" env-default:"1.1.1.1:53/tcp"`
+	Resolvers []Resolver        `yaml:"resolvers" env-description:"dns resolvers" env-default:""`
 	Records   map[string]string `yaml:"records" env-description:"custom records <1.3.3.7: 'leet.com'>" env-default:""`
+}
+
+type Resolver struct {
+	IP    string         `yaml:"ip" env-description:"resolver ip" env-default:"1.1.1.1"`
+	Proto string         `yaml:"proto" env-description:"resolver proto <tcp/udp>" env-default:"tcp"`
+	Port  int            `yaml:"port" env-description:"resolver port" env-default:"53"`
+	Rule  string         `yaml:"rule" env-description:"allow regular for domains" env-default:".*"`
+	Re    *regexp.Regexp `yaml:"-"`
 }
 
 type Config struct {
@@ -124,8 +133,8 @@ var _default = Config{
 	Dns: dnsConfig{
 		Listen: "127.1.1.53",
 		Render: &_true,
-		Resolvers: []string{
-			"1.1.1.1:53/tcp",
+		Resolvers: []Resolver{
+			{IP: "1.1.1.1", Proto: "tcp", Port: 53, Rule: ""},
 		},
 		Records: map[string]string{
 			"test.lan": "10.10.10.10",
@@ -165,15 +174,42 @@ func New(filename string) (*Config, error) {
 		return nil, fmt.Errorf("failed to load config: %w", err)
 	}
 
-	if !protoContains(_config.Socks.Proto) {
-		return &_default, ErrProtoConains
+	for _, f := range []func() error{
+		_config.checkProto,
+		_config.prepareResolvers,
+		_config.chiselLookup,
+	} {
+		if err := f(); err != nil {
+			return nil, err
+		}
 	}
 
-	if _config.Proxy.Type == ChiselType {
-		_config.Chisel.IP = net.ResolveHost(_config.Chisel.Server)
-		_config.Dns.Records[net.GetDomain(_config.Chisel.Server)] = _config.Chisel.IP
-	}
 	return &_config, nil
+}
+
+func (c *Config) chiselLookup() error {
+	if c.Proxy.Type == ChiselType {
+		c.Chisel.IP = net.ResolveHost(c.Chisel.Server)
+		c.Dns.Records[net.GetDomain(c.Chisel.Server)] = c.Chisel.IP
+	}
+	return nil
+}
+
+func (c *Config) checkProto() error {
+	if !protoContains(c.Socks.Proto) {
+		return ErrProtoConains
+	}
+	return nil
+}
+
+func (c *Config) prepareResolvers() (err error) {
+	for i, r := range c.Dns.Resolvers {
+		if r.Re, err = regexp.Compile(r.Rule); err != nil {
+			return fmt.Errorf("failed to parse rule: %w", err)
+		}
+		c.Dns.Resolvers[i] = r
+	}
+	return nil
 }
 
 func (c *Config) Save(path string) error {
