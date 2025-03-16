@@ -18,8 +18,9 @@ const (
 )
 
 const (
-	SocksType = "socks"
-	SshType   = "ssh"
+	SocksType  = "socks"
+	SshType    = "ssh"
+	ChiselType = "chisel"
 )
 
 const (
@@ -46,7 +47,7 @@ func protoContains(proto string) bool {
 }
 
 type proxyConfig struct {
-	Type string `yaml:"type" env-description:"type of proxy <socks/ssh>" env-default:"socks"`
+	Type string `yaml:"type" env-description:"type of proxy <socks/ssh/chisel>" env-default:"socks"`
 }
 
 type intefaceConfig struct {
@@ -73,6 +74,13 @@ type sshConfig struct {
 	LocalPort int    `yaml:"-"`
 }
 
+type chiselConfig struct {
+	Server   string `yaml:"server" env-description:"chisel server url <https://127.0.0.1>" env-default:""`
+	Username string `yaml:"username" env-description:"username for chisel" env-default:""`
+	Password string `yaml:"password" env-description:"password for chisel" env-default:""`
+	Proxy    string `yaml:"proxy" env-description:"run chisel via proxy <<http/socks5>://username:password@ip:port>" env-default:""`
+}
+
 type dnsConfig struct {
 	Listen    string   `yaml:"listen" env-description:"listen local dns" env-default:"127.1.1.53"`
 	Render    *bool    `yaml:"render" env-description:"render resolvconf on local dns" env-default:"true"`
@@ -84,6 +92,7 @@ type Config struct {
 	Interface intefaceConfig `yaml:"interface" env-description:"interface params"`
 	Socks     socksConfig    `yaml:"socks" env-description:"proxy via socks5"`
 	Ssh       sshConfig      `yaml:"ssh" env-description:"proxy via ssh params"`
+	Chisel    chiselConfig   `yaml:"chisel" env-description:"proxy via chisel"`
 	Dns       dnsConfig      `yaml:"dns" env-description:"dns params"`
 }
 
