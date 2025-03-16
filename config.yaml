@@ -22,15 +22,17 @@ ssh:
   port: 22
   extra: ""
 chisel:
-  server: ""
-  username: ""
-  password: ""
-  proxy: ""
+  server: "https://chisel.com"
+  username: "username"
+  password: "password"
+  proxy: "socks5h://proxy_username:proxy_password@1.3.3.7:1080" # only support http/socks5h/socks
 # warning: udp not route to proxy, t2s route only tcp
 dns:
   listen: "127.1.1.53"
+  render: true
   resolvers:
     # - "127.1.2.53:53/tcp"
     - "1.1.1.1:53/tcp"
     # - "10.10.10.1:53/udp"
-  render: true
+  records:
+    test.lan: "10.10.10.10"

@@ -27,6 +27,7 @@ func main() {
 		_config.Dns.Listen,
 		_config.Dns.Resolvers,
 		*_config.Dns.Render,
+		_config.Dns.Records,
 	)
 	if err != nil {
 		log.Fatalln(err)
