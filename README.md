@@ -147,8 +147,14 @@ dns:
   listen: "127.1.1.53"
   render: true
   resolvers:
-    - "127.1.2.53:53/tcp"
-    - "1.1.1.1:53/tcp"
+    - ip: "127.1.2.53"
+      port: 53
+      proto: tcp
+      rule: ""
+    - ip: "1.1.1.1"
+      port: 53
+      proto: tcp
+      rule: ""
 ```
 
 ### Proxy to [Chisel](https://github.com/jpillora/chisel)
@@ -189,19 +195,41 @@ chisel:
   proxy: "socks5h://proxy_username:proxy_password@1.3.3.7:1080" # only support http/socks5h/socks
 ```
 
-### Custom records to dns
+### Custom records for dns
 
 ```yaml
 dns:
   listen: "127.1.1.53"
   render: true
   resolvers:
-    - "1.1.1.1:53/tcp"
+    - ip: "1.1.1.1"
+      port: 53
+      proto: tcp
+      rule: ""
   records:
     test01.lan: "10.10.10.1"
     test02.lan: "10.10.10.2"
     test03.lan: "10.10.10.3"
     test04.lan: "10.10.10.4"
+```
+
+### Lock dns leak
+
+> Local dns 10.10.10.10 support resolv only for github.com
+
+```yaml
+dns:
+  listen: "127.1.1.53"
+  render: true
+  resolvers:
+    - ip: "1.1.1.1"
+      port: 53
+      proto: tcp
+      rule: ""
+    - ip: "10.10.10.10"
+      port: 53
+      proto: udp
+      rule: '.*github\.com'
 ```
 
 ### If you run via ssh - must add exclude to your ssh connect address
