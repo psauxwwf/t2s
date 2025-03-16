@@ -1,5 +1,5 @@
 proxy:
-  type: "socks"
+  type: "socks" # socks/ssh/chisel
 interface:
   device: "tun0"
   exclude:
@@ -21,6 +21,11 @@ ssh:
   host: "192.168.1.1"
   port: 22
   extra: ""
+chisel:
+  server: ""
+  username: ""
+  password: ""
+  proxy: ""
 # warning: udp not route to proxy, t2s route only tcp
 dns:
   listen: "127.1.1.53"

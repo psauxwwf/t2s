@@ -207,8 +207,9 @@ func (t *Tun2socksme) disableRP() error {
 
 func getTun(_config *config.Config) (tun.Tunnable, error) {
 	var m = map[string]func(*config.Config) (tun.Tunnable, error){
-		config.SocksType: tun.Socks,
-		config.SshType:   tun.Ssh,
+		config.SocksType:  tun.Socks,
+		config.SshType:    tun.Ssh,
+		config.ChiselType: tun.Chisel,
 	}
 
 	if f, ok := m[_config.Proxy.Type]; ok {
