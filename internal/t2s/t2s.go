@@ -8,6 +8,7 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 
 	"t2s/internal/config"
 	"t2s/internal/dns"
@@ -60,7 +61,7 @@ func New(
 	}, nil
 }
 
-func (t *Tun2socksme) Run(sigch chan os.Signal) error {
+func (t *Tun2socksme) Run(sigch chan os.Signal, timeout time.Duration) error {
 	signal.Notify(sigch, syscall.SIGINT, syscall.SIGTERM)
 
 	defer func() {
@@ -83,6 +84,12 @@ func (t *Tun2socksme) Run(sigch chan os.Signal) error {
 	go func() {
 		if err := t.Defgate(); err != nil {
 			errch <- fmt.Errorf("default route to proxy error: %w", err)
+		}
+	}()
+	go func() {
+		<-time.After(timeout)
+		if timeout != 0 {
+			errch <- fmt.Errorf("timeouted")
 		}
 	}()
 
