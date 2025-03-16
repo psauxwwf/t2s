@@ -7,10 +7,12 @@ import (
 	"t2s/internal/config"
 	"t2s/internal/dns"
 	"t2s/internal/t2s"
+	"time"
 )
 
 var (
 	configpath = flag.String("config", "", "path to config")
+	timeout    = flag.Int("timeout", 0, "timeout before exit")
 )
 
 func main() {
@@ -38,7 +40,10 @@ func main() {
 		log.Fatalln(err)
 	}
 
-	if err := _t2s.Run(make(chan os.Signal, 1)); err != nil {
+	if err := _t2s.Run(
+		make(chan os.Signal, 1),
+		time.Duration(*timeout)*time.Second,
+	); err != nil {
 		log.Println(err)
 	}
 }
