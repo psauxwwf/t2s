@@ -1,10 +1,13 @@
 module t2s
 
-go 1.23
+go 1.23.1
+
+toolchain go1.23.4
 
 require (
 	github.com/devil666face/tun2socks v0.0.0-20250301224203-b3709862bf07
 	github.com/ilyakaznacheev/cleanenv v1.5.0
+	github.com/jpillora/chisel v1.10.1
 	github.com/miekg/dns v1.1.63
 	gopkg.in/yaml.v3 v3.0.1
 )
@@ -12,7 +15,9 @@ require (
 require (
 	github.com/BurntSushi/toml v1.4.1-0.20240526193622-a339e1f7089c // indirect
 	github.com/ajg/form v1.5.1 // indirect
+	github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
+	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/go-chi/chi/v5 v5.2.1 // indirect
 	github.com/go-chi/cors v1.2.1 // indirect
 	github.com/go-chi/render v1.0.3 // indirect
@@ -23,9 +28,10 @@ require (
 	github.com/gorilla/schema v1.4.1 // indirect
 	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/joho/godotenv v1.5.1 // indirect
+	github.com/jpillora/backoff v1.0.0 // indirect
+	github.com/jpillora/sizestr v1.0.0 // indirect
 	github.com/kr/pretty v0.1.0 // indirect
 	go.uber.org/atomic v1.11.0 // indirect
-	go.uber.org/automaxprocs v1.6.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
 	golang.org/x/crypto v0.35.0 // indirect
