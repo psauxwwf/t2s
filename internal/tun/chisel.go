@@ -3,9 +3,7 @@ package tun
 import (
 	"context"
 	"fmt"
-	"net"
 	"net/http"
-	"net/url"
 	"time"
 
 	"t2s/internal/config"
@@ -15,6 +13,7 @@ import (
 
 type chisel struct {
 	server, username, password, proxy string
+	ip                                string
 	*Tun
 }
 
@@ -24,28 +23,12 @@ func wrapChisel(
 ) *chisel {
 	return &chisel{
 		config.Chisel.Server, config.Chisel.Username, config.Chisel.Password, config.Chisel.Proxy,
+		config.Chisel.IP,
 		tun,
 	}
 }
 
-func (c *chisel) Host() string {
-	_url, err := url.Parse(c.server)
-	if err != nil {
-		return ""
-	}
-
-	hostname := _url.Hostname()
-	if net.ParseIP(hostname) != nil {
-		return hostname
-	}
-
-	ip, err := net.LookupIP(hostname)
-	if err != nil {
-		return hostname
-	}
-
-	return ip[0].String()
-}
+func (c *chisel) Host() string { return c.ip }
 
 func Chisel(_config *config.Config) (Tunnable, error) {
 	return wrapChisel(
@@ -60,23 +43,29 @@ func Chisel(_config *config.Config) (Tunnable, error) {
 }
 
 func (c *chisel) Run() chan error {
-	var errch = c.Tun.Run()
+	errch := c.Tun.Run()
+
+	client, err := getClient(
+		c.server,
+		c.username,
+		c.password,
+		c.proxy,
+	)
+	if err != nil {
+		errch <- err
+		return errch
+	}
+	if err := client.Start(context.Background()); err != nil {
+		errch <- err
+		return errch
+	}
 	go func() {
-		client, err := getClient(
-			c.server,
-			c.username,
-			c.password,
-			c.proxy,
-		)
-		if err != nil {
-			errch <- err
-			return
-		}
-		if err := client.Start(context.Background()); err != nil {
+		if err := client.Wait(); err != nil {
 			errch <- err
 			return
 		}
 	}()
+	time.Sleep(time.Second * 1)
 	return errch
 }
 
@@ -97,7 +86,7 @@ func getClient(server, username, password, proxy string) (*client.Client, error)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create chisel client: %w", err)
 	}
-	_client.Debug = true
+	// _client.Debug = true
 
 	return _client, nil
 }

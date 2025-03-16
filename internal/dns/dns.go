@@ -1,12 +1,17 @@
 package dns
 
 import (
+	"errors"
 	"fmt"
 	"log"
+	"net"
+	"strings"
 	"sync"
 
 	"github.com/miekg/dns"
 )
+
+var ErrResolveFailed = errors.New("failed to resolve")
 
 func lockf(m *sync.Mutex, f func() error) error {
 	m.Lock()
@@ -19,33 +24,82 @@ type Dns struct {
 	resolvers []server
 	render    bool
 	server    *dns.Server
+	records   map[string]string
 	manager   *manager
 
 	m sync.Mutex
 }
 
-func (d *Dns) resolv(w dns.ResponseWriter, r *dns.Msg) {
+func (d *Dns) resolveCustom(w dns.ResponseWriter, r *dns.Msg) error {
+	for _, q := range r.Question {
+		domain := strings.TrimSuffix(strings.ToLower(q.Name), ".")
+		if ip, found := d.records[domain]; found && q.Qtype == dns.TypeA {
+			message := new(dns.Msg)
+			message.SetReply(r)
+			message.Answer = append(message.Answer, &dns.A{
+				Hdr: dns.RR_Header{Name: q.Name, Rrtype: dns.TypeA, Class: dns.ClassINET, Ttl: 60},
+				A:   net.ParseIP(ip),
+			})
+			return w.WriteMsg(message)
+		}
+	}
+	return ErrResolveFailed
+}
+
+func (d *Dns) resolveExchange(w dns.ResponseWriter, r *dns.Msg) error {
 	client := &dns.Client{}
 	for _, resolver := range d.resolvers {
 		client.Net = resolver.proto
 		resp, _, err := client.Exchange(r, fmt.Sprintf("%s:%s", resolver.address, resolver.port))
 		if err != nil {
-			// log.Printf("resolver %s failed or returned no answer: %s", resolver.address, err)
 			continue
 		}
 		if resp == nil || len(resp.Answer) == 0 {
-			// log.Printf("resolver %s not found record", resolver.address)
 			continue
 		}
+		return w.WriteMsg(resp)
+	}
+	return ErrResolveFailed
+}
 
-		if err := w.WriteMsg(resp); err != nil {
-			// log.Printf("failed to write response: %v", err)
-			dns.HandleFailed(w, r)
-			return
-		}
+func (d *Dns) resolv(w dns.ResponseWriter, r *dns.Msg) {
+	// for _, q := range r.Question {
+	// 	domain := strings.ToLower(q.Name)
+	// 	if ip, found := d.customRecords[domain]; found && q.Qtype == dns.TypeA {
+	// 		message := new(dns.Msg)
+	// 		message.SetReply(r)
+	// 		message.Answer = append(message.Answer, &dns.A{
+	// 			Hdr: dns.RR_Header{Name: q.Name, Rrtype: dns.TypeA, Class: dns.ClassINET, Ttl: 60},
+	// 			A:   net.ParseIP(ip),
+	// 		})
+	// 		if err := w.WriteMsg(message); err != nil {
+	// 			log.Println(err)
+	// 		}
+	// 		return
+	// 	}
+	// }
+	// client := &dns.Client{}
+	// for _, resolver := range d.resolvers {
+	// 	client.Net = resolver.proto
+	// 	resp, _, err := client.Exchange(r, fmt.Sprintf("%s:%s", resolver.address, resolver.port))
+	// 	if err != nil {
+	// 		continue
+	// 	}
+	// 	if resp == nil || len(resp.Answer) == 0 {
+	// 		continue
+	// 	}
+
+	// 	if err := w.WriteMsg(resp); err != nil {
+	// 		log.Println(err)
+	// 	}
+	// 	return
+	// }
+	if err := d.resolveExchange(w, r); err == nil {
 		return
 	}
-	// log.Println("all resolvers failed")
+	if err := d.resolveCustom(w, r); err == nil {
+		return
+	}
 	dns.HandleFailed(w, r)
 }
 
@@ -53,6 +107,7 @@ func New(
 	_listen string,
 	_resolvers []string,
 	_resolvconfRender bool,
+	_records map[string]string,
 ) (*Dns, error) {
 	_manager, err := Manager(_listen)
 	if err != nil {
@@ -63,6 +118,7 @@ func New(
 			resolvers: parseResolvers(_resolvers),
 			render:    _resolvconfRender,
 			listen:    _listen,
+			records:   _records,
 			manager:   _manager,
 		}
 		mux = dns.NewServeMux()

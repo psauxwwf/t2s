@@ -78,13 +78,15 @@ type chiselConfig struct {
 	Server   string `yaml:"server" env-description:"chisel server url <https://127.0.0.1>" env-default:""`
 	Username string `yaml:"username" env-description:"username for chisel" env-default:""`
 	Password string `yaml:"password" env-description:"password for chisel" env-default:""`
-	Proxy    string `yaml:"proxy" env-description:"run chisel via proxy <<http/socks5>://username:password@ip:port>" env-default:""`
+	Proxy    string `yaml:"proxy" env-description:"run chisel via proxy <<http/socks5h/socks>://username:password@ip:port>" env-default:""`
+	IP       string `yaml:"-"`
 }
 
 type dnsConfig struct {
-	Listen    string   `yaml:"listen" env-description:"listen local dns" env-default:"127.1.1.53"`
-	Render    *bool    `yaml:"render" env-description:"render resolvconf on local dns" env-default:"true"`
-	Resolvers []string `yaml:"resolvers" env-description:"dns resolvers" env-default:"1.1.1.1:53/tcp"`
+	Listen    string            `yaml:"listen" env-description:"listen local dns" env-default:"127.1.1.53"`
+	Render    *bool             `yaml:"render" env-description:"render resolvconf on local dns" env-default:"true"`
+	Resolvers []string          `yaml:"resolvers" env-description:"dns resolvers" env-default:"1.1.1.1:53/tcp"`
+	Records   map[string]string `yaml:"records" env-description:"custom records <1.3.3.7: 'leet.com'>" env-default:""`
 }
 
 type Config struct {
@@ -121,10 +123,13 @@ var _default = Config{
 	},
 	Dns: dnsConfig{
 		Listen: "127.1.1.53",
+		Render: &_true,
 		Resolvers: []string{
 			"1.1.1.1:53/tcp",
 		},
-		Render: &_true,
+		Records: map[string]string{
+			"test.lan": "10.10.10.10",
+		},
 	},
 }
 
@@ -162,6 +167,11 @@ func New(filename string) (*Config, error) {
 
 	if !protoContains(_config.Socks.Proto) {
 		return &_default, ErrProtoConains
+	}
+
+	if _config.Proxy.Type == ChiselType {
+		_config.Chisel.IP = net.ResolveHost(_config.Chisel.Server)
+		_config.Dns.Records[net.GetDomain(_config.Chisel.Server)] = _config.Chisel.IP
 	}
 	return &_config, nil
 }

@@ -151,6 +151,59 @@ dns:
     - "1.1.1.1:53/tcp"
 ```
 
+### Proxy to [Chisel](https://github.com/jpillora/chisel)
+
+```bash
+wget https://github.com/jpillora/chisel/releases/download/v1.10.1/chisel_1.10.1_linux_amd64.gz
+gunzip chisel_1.10.1_linux_amd64.gz
+chmod +x chisel_1.10.1_linux_amd64
+openssl req -x509 -nodes -newkey rsa:2048 -keyout server.key -out server.crt -days 365
+./chisel_1.10.1_linux_amd64 server -p 443 --auth username:password --tls-cert server.crt --tls-key server.key --socks5
+```
+
+```yaml
+proxy:
+  type: "chisel"
+---
+chisel:
+  server: "https://chisel.com"
+  username: "username"
+  password: "password"
+  proxy: ""
+```
+
+### Proxy to Chisel via proxy
+
+```yaml
+proxy:
+  type: "chisel"
+interface:
+  device: "tun0"
+  exclude:
+    - "1.3.3.7"
+---
+chisel:
+  server: "https://chisel.com"
+  username: "username"
+  password: "password"
+  proxy: "socks5h://proxy_username:proxy_password@1.3.3.7:1080" # only support http/socks5h/socks
+```
+
+### Custom records to dns
+
+```yaml
+dns:
+  listen: "127.1.1.53"
+  render: true
+  resolvers:
+    - "1.1.1.1:53/tcp"
+  records:
+    test01.lan: "10.10.10.1"
+    test02.lan: "10.10.10.2"
+    test03.lan: "10.10.10.3"
+    test04.lan: "10.10.10.4"
+```
+
 ### If you run via ssh - must add exclude to your ssh connect address
 
 ```bash
