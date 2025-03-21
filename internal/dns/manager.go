@@ -17,8 +17,9 @@ var (
 # Stop t2s for return default config.
 nameserver %s
 `
-	respath      = filepath.Join("/", "etc", "resolv.conf")
-	reInterfaces = regexp.MustCompile(`\((\w+)\)`)
+	respath        = filepath.Join("/", "etc", "resolv.conf")
+	respathsystemd = filepath.Join("/", "run", "systemd", "resolve", "stub-resolv.conf")
+	reInterfaces   = regexp.MustCompile(`\((\w+)\)`)
 )
 
 type manager struct {
@@ -68,6 +69,24 @@ func (m *manager) Revert() error {
 	}
 	if err := fs.WriteFile(respath, m.currentconf); err != nil {
 		return fmt.Errorf("resolvconf error: %w", err)
+	}
+	for _, i := range getInterfaces() {
+		if _, err := shell.New("resolvectl", "revert", i).Run(); err != nil {
+			return fmt.Errorf("failed to revert dns for %s: %w", i, err)
+		}
+	}
+	if _, err := shell.New("systemctl", "restart", "systemd-resolved").Run(); err != nil {
+		return fmt.Errorf("failed to restart dns: %w", err)
+	}
+	return nil
+}
+
+func (m *manager) Repair() error {
+	if err := os.RemoveAll(respath); err != nil {
+		return fmt.Errorf("failed to unlink %s: %w", respath, err)
+	}
+	if err := os.Symlink(respathsystemd, respath); err != nil {
+		return fmt.Errorf("error creating symlink: %v", err)
 	}
 	for _, i := range getInterfaces() {
 		if _, err := shell.New("resolvectl", "revert", i).Run(); err != nil {

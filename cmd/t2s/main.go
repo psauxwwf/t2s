@@ -13,6 +13,7 @@ import (
 var (
 	configpath = flag.String("config", "", "path to config")
 	timeout    = flag.Int("timeout", 0, "timeout before exit")
+	repair     = flag.Bool("repair", false, "repair dns error")
 )
 
 func main() {
@@ -31,6 +32,12 @@ func main() {
 	)
 	if err != nil {
 		log.Fatalln(err)
+	}
+	if *repair {
+		if err := _dns.Repair(); err != nil {
+			log.Fatalln(err)
+		}
+		return
 	}
 
 	_t2s, err := t2s.New(
