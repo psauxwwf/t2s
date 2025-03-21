@@ -180,3 +180,10 @@ func (d *Dns) Stop() error {
 	}
 	return nil
 }
+
+func (d *Dns) Repair() error {
+	if err := lockf(&d.m, d.manager.Repair); err != nil {
+		return fmt.Errorf("failed to repair dns: %w", err)
+	}
+	return nil
+}

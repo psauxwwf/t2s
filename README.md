@@ -255,6 +255,12 @@ interface:
 ### Repait systemd-resolved if symlink deleted
 
 ```bash
+t2s -repair
+```
+
+or
+
+```bash
 for in in $(ip a | grep '^[0-9]:' | cut -d ':' -f 2 | tr -d ' ' | grep -v lo); do sudo resolvectl revert $in; done
 sudo rm -f /etc/resolv.conf
 sudo ln -sf /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf
