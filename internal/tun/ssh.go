@@ -2,15 +2,15 @@ package tun
 
 import (
 	"fmt"
-	"strings"
 	"t2s/internal/config"
 	"t2s/pkg/shell"
 )
 
 type ssh struct {
-	username, host, args string
-	port, localPort      int
-	sshPID               int
+	username, host  string
+	args            []string
+	port, localPort int
+	sshPID          int
 	*Tun
 }
 
@@ -54,7 +54,7 @@ func (s *ssh) Run() chan error {
 func (s *ssh) sshOpts() []string {
 	var opts = []string{
 		"-o", "ExitOnForwardFailure=yes",
-		"-o", "ConnectTimeout=5",
+		"-o", "ConnectTimeout=10",
 	}
 	if s.port != 22 {
 		opts = append(opts, []string{"-p", fmt.Sprint(s.port)}...)
@@ -64,10 +64,8 @@ func (s *ssh) sshOpts() []string {
 		fmt.Sprintf("%s@%s", s.username, s.host),
 		"-N",
 	}...)
-	if s.args != "" {
-		opts = append(opts,
-			strings.Fields(strings.TrimSpace(s.args))...,
-		)
+	if len(s.args) != 0 {
+		opts = append(opts, s.args...)
 	}
 	return opts
 }
