@@ -138,6 +138,7 @@ interface:
     - "172.16.0.0/12"
     - "192.168.0.0/16"
   metric: 512
+  sleep: 5
 
 socks:
   host: "127.0.0.1"
@@ -193,6 +194,53 @@ chisel:
   username: "username"
   password: "password"
   proxy: "socks5h://proxy_username:proxy_password@1.3.3.7:1080" # only support http/socks5h/socks
+```
+
+### Proxy to ssh via Cloudfared
+
+```yaml
+proxy:
+  type: ssh
+interface:
+  device: tun0
+  exclude:
+    - 10.0.0.0/8
+    - 172.16.0.0/12
+    - 192.168.0.0/16
+  custom_routes:
+    - 104.21.88.227/32 via 192.168.0.1 dev wlp3s0 # routes for cloudflare servers
+    - 172.67.153.180/32 via 192.168.0.1 dev wlp3s0 # routes for cloudflare servers
+  metric: 512
+  sleep: 5 # sleep for connect to cloudflare
+socks:
+  proto: socks5
+  username: ""
+  password: ""
+  host: 127.0.0.1
+  port: 1080
+  args: ""
+ssh:
+  username: "user"
+  host: "ssh.host.com"
+  port: 22
+  args:
+    - -o
+    - ProxyCommand=cloudflared access ssh --hostname %h
+chisel:
+  server: ""
+  username: ""
+  password: ""
+  proxy: ""
+dns:
+  listen: 127.1.1.53
+  render: true
+  resolvers:
+    - ip: 1.1.1.1
+      proto: tcp
+      port: 53
+      rule: ""
+  records:
+    ssh.host.com: 172.67.153.180 # lookup your host (same as cloudflare servers)
 ```
 
 ### Custom records for dns
