@@ -68,11 +68,11 @@ type socksConfig struct {
 }
 
 type sshConfig struct {
-	Username  string `yaml:"username" env-description:"username for ssh" env-default:""`
-	Host      string `yaml:"host" env-description:"host for ssh" env-default:""`
-	Port      int    `yaml:"port" env-description:"removte ssh port" env-default:"22"`
-	Args      string `yaml:"args" env-description:"extra args for ssh like -J user@jumphost" env-default:""`
-	LocalPort int    `yaml:"-"`
+	Username  string   `yaml:"username" env-description:"username for ssh" env-default:""`
+	Host      string   `yaml:"host" env-description:"host for ssh" env-default:""`
+	Port      int      `yaml:"port" env-description:"removte ssh port" env-default:"22"`
+	Args      []string `yaml:"args" env-description:"extra args for ssh like -J user@jumphost" env-default:""`
+	LocalPort int      `yaml:"-"`
 }
 
 type chiselConfig struct {
@@ -117,7 +117,8 @@ var _default = Config{
 			"172.16.0.0/12",
 			"192.168.0.0/16",
 		},
-		Metric: 512,
+		CustomRoutes: []string{},
+		Metric:       512,
 	},
 	Proxy: proxyConfig{
 		Type: "socks",
@@ -129,6 +130,7 @@ var _default = Config{
 	},
 	Ssh: sshConfig{
 		Port: 22,
+		Args: []string{},
 	},
 	Dns: dnsConfig{
 		Listen: "127.1.1.53",
