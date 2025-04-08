@@ -34,6 +34,7 @@ type Tun2socksme struct {
 	dns     *dns.Dns
 	exclude []string
 	routes  []string
+	sleep   int
 
 	m sync.Mutex
 }
@@ -58,6 +59,7 @@ func New(
 		dns:     _dns,
 		exclude: _config.Interface.ExcludeNets,
 		routes:  _config.Interface.CustomRoutes,
+		sleep:   _config.Interface.Sleep,
 	}, nil
 }
 
@@ -82,6 +84,7 @@ func (t *Tun2socksme) Run(sigch chan os.Signal, timeout time.Duration) error {
 		}
 	}()
 	go func() {
+		time.Sleep(time.Second * time.Duration(t.sleep))
 		if err := t.Defgate(); err != nil {
 			errch <- fmt.Errorf("default route to proxy error: %w", err)
 		}

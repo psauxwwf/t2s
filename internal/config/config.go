@@ -56,6 +56,7 @@ type intefaceConfig struct {
 	ExcludeNets  []string `yaml:"exclude" env-description:"not routing to proxy this nets" env-default:""`
 	CustomRoutes []string `yaml:"custom_routes" env-description:"custom routes" env-default:""`
 	Metric       int      `yaml:"metric" env-description:"metric priority in route" env-default:"512"`
+	Sleep        int      `yaml:"sleep" env-description:"sleep before set default gateway" env-default:"0"`
 }
 
 type socksConfig struct {
@@ -119,6 +120,7 @@ var _default = Config{
 		},
 		CustomRoutes: []string{},
 		Metric:       512,
+		Sleep:        0,
 	},
 	Proxy: proxyConfig{
 		Type: "socks",
