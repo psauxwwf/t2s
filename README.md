@@ -88,6 +88,8 @@ relay://<username>:<password>@server_host:port?<nodelay=false>
 
 ### Proxy to tor
 
+[Get bridges](https://bridges.torproject.org/bridges?transport=obfs4)
+
 ```bash
 sudo apt-get install tor obfs4proxy --yes
 ```
