@@ -66,7 +66,8 @@ func (d *Dns) resolveExchange(w dns.ResponseWriter, r *dns.Msg) error {
 	for _, resolver := range d.resolvers {
 
 		if err := matchRule(resolver.Re, r); err != nil {
-			return err
+			continue
+			// return err
 		}
 
 		client.Net = resolver.Proto
