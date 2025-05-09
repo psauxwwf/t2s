@@ -300,6 +300,24 @@ interface:
     - "192.168.0.0/16"
 ```
 
+### Systemd unit
+
+```ini
+[Unit]
+Description=t2s
+After=network.target
+Wants=network.target
+
+[Service]
+User=root
+ExecStart=/usr/local/bin/t2s
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.targe
+```
+
 ---
 
 ### Repait systemd-resolved if symlink deleted
