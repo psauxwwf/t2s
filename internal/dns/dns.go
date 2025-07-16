@@ -25,6 +25,7 @@ type Dns struct {
 	listen    string
 	resolvers []config.Resolver
 	render    bool
+	enable    bool
 	server    *dns.Server
 	records   map[string]string
 	manager   *manager
@@ -127,6 +128,7 @@ func (d *Dns) resolv(w dns.ResponseWriter, r *dns.Msg) {
 func New(
 	_listen string,
 	_resolvers []config.Resolver,
+	_enable bool,
 	_resolvconfRender bool,
 	_records map[string]string,
 ) (*Dns, error) {
@@ -137,6 +139,7 @@ func New(
 	var (
 		_dns = &Dns{
 			resolvers: _resolvers,
+			enable:    _enable,
 			render:    _resolvconfRender,
 			listen:    _listen,
 			records:   _records,
@@ -164,8 +167,10 @@ func (d *Dns) Run() error {
 			log.Printf("set dns error: %v", err)
 		}
 	}
-	if err := d.server.ListenAndServe(); err != nil {
-		return fmt.Errorf("failed to start dns server: %w", err)
+	if d.enable {
+		if err := d.server.ListenAndServe(); err != nil {
+			return fmt.Errorf("failed to start dns server: %w", err)
+		}
 	}
 	return nil
 }
