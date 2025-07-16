@@ -104,6 +104,7 @@ DNSPort 127.1.2.53:53
 
 UseBridges 1
 ClientTransportPlugin obfs4 exec /usr/bin/obfs4proxy
+ExcludeExitNodes {ru},{by},{cn}
 
 Bridge obfs4 212.21.66.73:35401 C36F8D3C481910ED7A34F5ECEBE1C7C9A258F4A8 cert=9IygPQi2UKJ6pUjYTHl8ltg1cuPDvcsE9Os9TPVSioR0qmXU/0uSvD3rsm3jskV1nupJAg iat-mode=2
 Bridge obfs4 140.186.139.199:4444 A17E0D3FE22FA225EB4ACFEF242DBD1C71ED1D6B cert=4xg9Uri1mhV9PaHX7J4Uc2y/6VLdSiwJO8TQFDE8g0f0M1hGjQYfkO39h+sIw+L3vR1IeQ iat-mode=0
