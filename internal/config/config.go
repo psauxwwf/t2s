@@ -167,7 +167,13 @@ func New(filename string) (*Config, error) {
 	if err != nil {
 		port = 31888
 	}
-	_config := Config{Ssh: sshConfig{LocalPort: port}}
+	_config := Config{
+		Ssh: sshConfig{LocalPort: port},
+		Dns: dnsConfig{
+			Enable: new(bool),
+			Render: new(bool),
+		},
+	}
 
 	if err := cleanenv.ReadConfig(filename, &_config); err != nil {
 		if os.IsNotExist(err) {
