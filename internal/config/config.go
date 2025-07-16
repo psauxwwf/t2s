@@ -85,6 +85,7 @@ type chiselConfig struct {
 }
 
 type dnsConfig struct {
+	Enable    *bool             `yaml:"enable" env-description:"enable dns server" env-default:"true"`
 	Listen    string            `yaml:"listen" env-description:"listen local dns" env-default:"127.1.1.53"`
 	Render    *bool             `yaml:"render" env-description:"render resolvconf on local dns" env-default:"true"`
 	Resolvers []Resolver        `yaml:"resolvers" env-description:"dns resolvers" env-default:""`
