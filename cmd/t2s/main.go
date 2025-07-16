@@ -27,6 +27,7 @@ func main() {
 	_dns, err := dns.New(
 		_config.Dns.Listen,
 		_config.Dns.Resolvers,
+		*_config.Dns.Enable,
 		*_config.Dns.Render,
 		_config.Dns.Records,
 	)
