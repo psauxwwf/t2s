@@ -136,6 +136,7 @@ var _default = Config{
 		Args: []string{},
 	},
 	Dns: dnsConfig{
+		Enable: &_true,
 		Listen: "127.1.1.53",
 		Render: &_true,
 		Resolvers: []Resolver{
@@ -169,10 +170,6 @@ func New(filename string) (*Config, error) {
 	}
 	_config := Config{
 		Ssh: sshConfig{LocalPort: port},
-		Dns: dnsConfig{
-			Enable: new(bool),
-			Render: new(bool),
-		},
 	}
 
 	if err := cleanenv.ReadConfig(filename, &_config); err != nil {
