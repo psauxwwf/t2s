@@ -7,6 +7,7 @@ import (
 	"os/user"
 	"path/filepath"
 	"regexp"
+
 	"t2s/pkg/fs"
 	"t2s/pkg/net"
 
@@ -22,6 +23,7 @@ const (
 	SocksType  = "socks"
 	SshType    = "ssh"
 	ChiselType = "chisel"
+	DnsttType  = "dnstt"
 )
 
 const (
@@ -47,11 +49,11 @@ func protoContains(proto string) bool {
 	return false
 }
 
-type proxyConfig struct {
-	Type string `yaml:"type" env-description:"type of proxy <socks/ssh/chisel>" env-default:"socks"`
+type proxy struct {
+	Type string `yaml:"type" env-description:"type of proxy <socks/ssh/chisel/dnstt>" env-default:"socks"`
 }
 
-type intefaceConfig struct {
+type _inteface struct {
 	Device       string   `yaml:"device" env-description:"device name" env-default:"tun0"`
 	ExcludeNets  []string `yaml:"exclude" env-description:"not routing to proxy this nets" env-default:""`
 	CustomRoutes []string `yaml:"custom_routes" env-description:"custom routes" env-default:""`
@@ -59,7 +61,7 @@ type intefaceConfig struct {
 	Sleep        int      `yaml:"sleep" env-description:"sleep before set default gateway" env-default:"0"`
 }
 
-type socksConfig struct {
+type socks struct {
 	Proto    string `yaml:"proto" env-description:"proto <socks5/ss/relay>" env-default:"socks5"`
 	Username string `yaml:"username" env-description:"username for socks5 proxy" env-default:""`
 	Password string `yaml:"password" env-description:"password for socks5 proxy" env-default:""`
@@ -68,7 +70,7 @@ type socksConfig struct {
 	Args     string `yaml:"args" env-description:"socks5://username:password@host:port/<args>" env-default:""`
 }
 
-type sshConfig struct {
+type ssh struct {
 	Username  string   `yaml:"username" env-description:"username for ssh" env-default:""`
 	Host      string   `yaml:"host" env-description:"host for ssh" env-default:""`
 	Port      int      `yaml:"port" env-description:"removte ssh port" env-default:"22"`
@@ -76,7 +78,7 @@ type sshConfig struct {
 	LocalPort int      `yaml:"-"`
 }
 
-type chiselConfig struct {
+type chisel struct {
 	Server   string `yaml:"server" env-description:"chisel server url <https://127.0.0.1>" env-default:""`
 	Username string `yaml:"username" env-description:"username for chisel" env-default:""`
 	Password string `yaml:"password" env-description:"password for chisel" env-default:""`
@@ -84,7 +86,14 @@ type chiselConfig struct {
 	IP       string `yaml:"-"`
 }
 
-type dnsConfig struct {
+type dnstt struct {
+	Resolver string `yaml:"resolver" env-description:"recursive udp dns resolver>" env-default:"1.1.1.1:53"`
+	Pubkey   string `yaml:"pubkey" env-description:"pubkey as string" env-default:""`
+	Domain   string `yaml:"domain" env-description:"NS record on your domain with dnstt server" env-default:""`
+	IP       string `yaml:"-"`
+}
+
+type dns struct {
 	Enable    *bool             `yaml:"enable" env-description:"enable dns server" env-default:"true"`
 	Listen    string            `yaml:"listen" env-description:"listen local dns" env-default:"127.1.1.53"`
 	Render    *bool             `yaml:"render" env-description:"render resolvconf on local dns" env-default:"true"`
@@ -101,18 +110,19 @@ type Resolver struct {
 }
 
 type Config struct {
-	Proxy     proxyConfig    `yaml:"proxy" env-description:"proxy type"`
-	Interface intefaceConfig `yaml:"interface" env-description:"interface params"`
-	Socks     socksConfig    `yaml:"socks" env-description:"proxy via socks5"`
-	Ssh       sshConfig      `yaml:"ssh" env-description:"proxy via ssh params"`
-	Chisel    chiselConfig   `yaml:"chisel" env-description:"proxy via chisel"`
-	Dns       dnsConfig      `yaml:"dns" env-description:"dns params"`
+	Proxy     proxy     `yaml:"proxy" env-description:"proxy type"`
+	Interface _inteface `yaml:"interface" env-description:"interface params"`
+	Socks     socks     `yaml:"socks" env-description:"proxy via socks5"`
+	Ssh       ssh       `yaml:"ssh" env-description:"proxy via ssh params"`
+	Chisel    chisel    `yaml:"chisel" env-description:"proxy via chisel"`
+	Dnstt     dnstt     `yaml:"dnstt" env-description:"proxy via dnstt"`
+	Dns       dns       `yaml:"dns" env-description:"dns params"`
 }
 
 var _true = true
 
 var _default = Config{
-	Interface: intefaceConfig{
+	Interface: _inteface{
 		Device: "tun0",
 		ExcludeNets: []string{
 			"10.0.0.0/8",
@@ -123,19 +133,22 @@ var _default = Config{
 		Metric:       512,
 		Sleep:        0,
 	},
-	Proxy: proxyConfig{
+	Proxy: proxy{
 		Type: "socks",
 	},
-	Socks: socksConfig{
+	Socks: socks{
 		Proto: "socks5",
 		Host:  "127.0.0.1",
 		Port:  1080,
 	},
-	Ssh: sshConfig{
+	Ssh: ssh{
 		Port: 22,
 		Args: []string{},
 	},
-	Dns: dnsConfig{
+	Dnstt: dnstt{
+		Resolver: "1.1.1.1:53",
+	},
+	Dns: dns{
 		Enable: &_true,
 		Listen: "127.1.1.53",
 		Render: &_true,
@@ -169,7 +182,7 @@ func New(filename string) (*Config, error) {
 		port = 31888
 	}
 	_config := Config{
-		Ssh: sshConfig{LocalPort: port},
+		Ssh: ssh{LocalPort: port},
 	}
 
 	if err := cleanenv.ReadConfig(filename, &_config); err != nil {
@@ -185,7 +198,7 @@ func New(filename string) (*Config, error) {
 	for _, f := range []func() error{
 		_config.checkProto,
 		_config.prepareResolvers,
-		_config.chiselLookup,
+		_config.lookup,
 	} {
 		if err := f(); err != nil {
 			return nil, err
@@ -195,10 +208,13 @@ func New(filename string) (*Config, error) {
 	return &_config, nil
 }
 
-func (c *Config) chiselLookup() error {
+func (c *Config) lookup() error {
 	if c.Proxy.Type == ChiselType {
 		c.Chisel.IP = net.ResolveHost(c.Chisel.Server)
 		c.Dns.Records[net.GetDomain(c.Chisel.Server)] = c.Chisel.IP
+	}
+	if c.Proxy.Type == DnsttType {
+		c.Dnstt.IP = net.ToIP(c.Dnstt.Resolver)
 	}
 	return nil
 }

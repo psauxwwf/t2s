@@ -222,6 +222,7 @@ func getTun(_config *config.Config) (tun.Tunnable, error) {
 		config.SocksType:  tun.Socks,
 		config.SshType:    tun.Ssh,
 		config.ChiselType: tun.Chisel,
+		config.DnsttType:  tun.Dnstt,
 	}
 
 	if f, ok := m[_config.Proxy.Type]; ok {
