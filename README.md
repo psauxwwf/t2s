@@ -182,6 +182,33 @@ chisel:
   proxy: ""
 ```
 
+### Proxy to [DNSTT](https://github.com/bugfloyd/dnstt-deploy)
+
+#### Install server
+
+```bash
+ssh-keygen -t rsa -N "" -f /root/.ssh/id_rsa
+cat /root/.ssh/id_rsa.pub >> /root/.ssh/authorized_keys
+ssh -N -D 127.0.0.1:8000 root@127.0.0.1 -f
+
+wget https://dnstt.network/dnstt-server-linux-amd64
+chmod +x dnstt-server-linux-amd64
+
+./dnstt-server-linux-amd64 -gen-key -privkey-file server.key -pubkey-file server.pub
+./dnstt-server-linux-amd64 -udp :53 -privkey-file server.key t.yourdomain.xyz 127.0.0.1:8000
+cat server.pub
+```
+
+```yaml
+proxy:
+  type: dnstt
+---
+dnstt:
+  resolver: 1.1.1.1:53
+  pubkey: "7c25844f2536a3d82b9a7a4c052f119f34ec97919bf9574679897d08f241ca48"
+  domain: "t.yourdomain.xyz"
+```
+
 ### Proxy to Chisel via proxy
 
 ```yaml

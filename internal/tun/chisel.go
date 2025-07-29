@@ -45,7 +45,7 @@ func Chisel(_config *config.Config) (Tunnable, error) {
 func (c *chisel) Run() chan error {
 	errch := c.Tun.Run()
 
-	client, err := getClient(
+	client, err := getChisel(
 		c.server,
 		c.username,
 		c.password,
@@ -69,7 +69,7 @@ func (c *chisel) Run() chan error {
 	return errch
 }
 
-func getClient(server, username, password, proxy string) (*client.Client, error) {
+func getChisel(server, username, password, proxy string) (*client.Client, error) {
 	config := client.Config{
 		Server:        server,
 		Auth:          fmt.Sprintf("%s:%s", username, password),
