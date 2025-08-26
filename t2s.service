@@ -1,0 +1,13 @@
+[Unit]
+Description=t2s
+After=network.target
+Wants=network.target
+
+[Service]
+User=root
+ExecStart=/usr/local/bin/t2s
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
