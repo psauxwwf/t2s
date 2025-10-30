@@ -29,6 +29,7 @@ func main() {
 		_config.Dns.Resolvers,
 		*_config.Dns.Enable,
 		*_config.Dns.Render,
+		*_config.Dns.Resolvectl,
 		_config.Dns.Records,
 	)
 	if err != nil {
