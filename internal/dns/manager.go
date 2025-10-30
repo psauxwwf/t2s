@@ -47,7 +47,7 @@ func Manager(
 		_manager.currentconf = currentconf
 		link, err := fs.CheckSymlink(respath)
 		if err != nil {
-			log.Println("chech symlink: %w", err)
+			log.Println("chech symlink:", err)
 		}
 		_manager.link = link
 	}
@@ -55,51 +55,65 @@ func Manager(
 }
 
 func (m *manager) Set() error {
-	if m.render {
-		if m.link != "" {
-			if err := os.RemoveAll(respath); err != nil {
-				return fmt.Errorf("failed to unlink %s: %w", respath, err)
+	return errors.Join(
+		func() error {
+			if m.render {
+				if m.link != "" {
+					if err := os.RemoveAll(respath); err != nil {
+						return fmt.Errorf("failed to unlink %s: %w", respath, err)
+					}
+				}
+				if err := render(respath, resolvconf, m.listen); err != nil {
+					return fmt.Errorf("resolvconf error: %w", err)
+				}
 			}
-		}
-		if err := render(respath, resolvconf, m.listen); err != nil {
-			return fmt.Errorf("resolvconf error: %w", err)
-		}
-	}
-	if m.resolvect {
-		for _, i := range m.getInterfaces() {
-			if _, err := shell.New("resolvectl", "dns", i, m.listen).Run(); err != nil {
-				return fmt.Errorf("failed to set dns %s for %s: %w", m.listen, i, err)
+			return nil
+		}(),
+		func() error {
+			if m.resolvect {
+				for _, i := range m.getInterfaces() {
+					if _, err := shell.New("resolvectl", "dns", i, m.listen).Run(); err != nil {
+						return fmt.Errorf("failed to set dns %s for %s: %w", m.listen, i, err)
+					}
+				}
 			}
-		}
-	}
-	return nil
+			return nil
+		}(),
+	)
 }
 
 func (m *manager) Revert() error {
-	if m.render {
-		if m.link != "" {
-			if err := os.RemoveAll(respath); err != nil {
-				return fmt.Errorf("failed to unlink %s: %w", respath, err)
+	return errors.Join(
+		func() error {
+			if m.render {
+				if m.link != "" {
+					if err := os.RemoveAll(respath); err != nil {
+						return fmt.Errorf("failed to unlink %s: %w", respath, err)
+					}
+				}
+				if err := os.Symlink(m.link, respath); err != nil {
+					return fmt.Errorf("error creating symlink: %v", err)
+				}
+				if err := fs.WriteFile(respath, m.currentconf); err != nil {
+					return fmt.Errorf("resolvconf error: %w", err)
+				}
 			}
-		}
-		if err := os.Symlink(m.link, respath); err != nil {
-			return fmt.Errorf("error creating symlink: %v", err)
-		}
-		if err := fs.WriteFile(respath, m.currentconf); err != nil {
-			return fmt.Errorf("resolvconf error: %w", err)
-		}
-	}
-	if m.resolvect {
-		for _, i := range m.getInterfaces() {
-			if _, err := shell.New("resolvectl", "revert", i).Run(); err != nil {
-				return fmt.Errorf("failed to revert dns for %s: %w", i, err)
+			return nil
+		}(),
+		func() error {
+			if m.resolvect {
+				for _, i := range m.getInterfaces() {
+					if _, err := shell.New("resolvectl", "revert", i).Run(); err != nil {
+						return fmt.Errorf("failed to revert dns for %s: %w", i, err)
+					}
+				}
+				if _, err := shell.New("systemctl", "restart", "systemd-resolved").Run(); err != nil {
+					return fmt.Errorf("failed to restart dns: %w", err)
+				}
 			}
-		}
-		if _, err := shell.New("systemctl", "restart", "systemd-resolved").Run(); err != nil {
-			return fmt.Errorf("failed to restart dns: %w", err)
-		}
-	}
-	return nil
+			return nil
+		}(),
+	)
 }
 
 func (m *manager) Repair() error {
