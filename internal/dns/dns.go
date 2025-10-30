@@ -133,7 +133,7 @@ func New(
 }
 
 func (d *Dns) Run() error {
-	if !d.enable {
+	if d.enable {
 		if err := lockf(&d.m, d.manager.Set); err != nil {
 			log.Printf("set dns error: %v", err)
 		}
