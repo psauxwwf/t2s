@@ -24,7 +24,6 @@ func lockf(m *sync.Mutex, f func() error) error {
 type Dns struct {
 	listen    string
 	resolvers []config.Resolver
-	render    bool
 	enable    bool
 	server    *dns.Server
 	records   map[string]string
@@ -85,37 +84,6 @@ func (d *Dns) resolveExchange(w dns.ResponseWriter, r *dns.Msg) error {
 }
 
 func (d *Dns) resolv(w dns.ResponseWriter, r *dns.Msg) {
-	// for _, q := range r.Question {
-	// 	domain := strings.ToLower(q.Name)
-	// 	if ip, found := d.customRecords[domain]; found && q.Qtype == dns.TypeA {
-	// 		message := new(dns.Msg)
-	// 		message.SetReply(r)
-	// 		message.Answer = append(message.Answer, &dns.A{
-	// 			Hdr: dns.RR_Header{Name: q.Name, Rrtype: dns.TypeA, Class: dns.ClassINET, Ttl: 60},
-	// 			A:   net.ParseIP(ip),
-	// 		})
-	// 		if err := w.WriteMsg(message); err != nil {
-	// 			log.Println(err)
-	// 		}
-	// 		return
-	// 	}
-	// }
-	// client := &dns.Client{}
-	// for _, resolver := range d.resolvers {
-	// 	client.Net = resolver.proto
-	// 	resp, _, err := client.Exchange(r, fmt.Sprintf("%s:%s", resolver.address, resolver.port))
-	// 	if err != nil {
-	// 		continue
-	// 	}
-	// 	if resp == nil || len(resp.Answer) == 0 {
-	// 		continue
-	// 	}
-
-	// 	if err := w.WriteMsg(resp); err != nil {
-	// 		log.Println(err)
-	// 	}
-	// 	return
-	// }
 	if err := d.resolveCustom(w, r); err == nil {
 		return
 	}
@@ -129,19 +97,22 @@ func New(
 	_listen string,
 	_resolvers []config.Resolver,
 	_enable bool,
-	_resolvconfRender bool,
+	render, resolvectl bool,
 	_records map[string]string,
 ) (*Dns, error) {
-	_manager, err := Manager(_listen)
+	_manager, err := Manager(
+		_listen,
+		render,
+		resolvectl,
+	)
 	if err != nil {
 		return nil, err
 	}
 	var (
 		_dns = &Dns{
+			listen:    _listen,
 			resolvers: _resolvers,
 			enable:    _enable,
-			render:    _resolvconfRender,
-			listen:    _listen,
 			records:   _records,
 			manager:   _manager,
 		}
@@ -162,12 +133,10 @@ func New(
 }
 
 func (d *Dns) Run() error {
-	if d.render {
+	if !d.enable {
 		if err := lockf(&d.m, d.manager.Set); err != nil {
 			log.Printf("set dns error: %v", err)
 		}
-	}
-	if d.enable {
 		if err := d.server.ListenAndServe(); err != nil {
 			return fmt.Errorf("failed to start dns server: %w", err)
 		}
@@ -176,13 +145,13 @@ func (d *Dns) Run() error {
 }
 
 func (d *Dns) Stop() error {
-	if d.render {
+	if d.enable {
 		if err := lockf(&d.m, d.manager.Revert); err != nil {
 			log.Printf("revert dns error: %v", err)
 		}
-	}
-	if err := d.server.Shutdown(); err != nil {
-		return fmt.Errorf("failed to stop dns server: %w", err)
+		if err := d.server.Shutdown(); err != nil {
+			return fmt.Errorf("failed to stop dns server: %w", err)
+		}
 	}
 	return nil
 }

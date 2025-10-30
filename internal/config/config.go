@@ -94,11 +94,12 @@ type dnstt struct {
 }
 
 type dns struct {
-	Enable    *bool             `yaml:"enable" env-description:"enable dns server" env-default:"true"`
-	Listen    string            `yaml:"listen" env-description:"listen local dns" env-default:"127.1.1.53"`
-	Render    *bool             `yaml:"render" env-description:"render resolvconf on local dns" env-default:"true"`
-	Resolvers []Resolver        `yaml:"resolvers" env-description:"dns resolvers" env-default:""`
-	Records   map[string]string `yaml:"records" env-description:"custom records <1.3.3.7: 'leet.com'>" env-default:""`
+	Enable     *bool             `yaml:"enable" env-description:"enable dns server" env-default:"true"`
+	Listen     string            `yaml:"listen" env-description:"listen local dns" env-default:"127.1.1.53"`
+	Render     *bool             `yaml:"render" env-description:"render resolvconf on local dns" env-default:"true"`
+	Resolvectl *bool             `yaml:"resolvectl" env-description:"set resolvectl on local dns" env-default:"true"`
+	Resolvers  []Resolver        `yaml:"resolvers" env-description:"dns resolvers" env-default:""`
+	Records    map[string]string `yaml:"records" env-description:"custom records <1.3.3.7: 'leet.com'>" env-default:""`
 }
 
 type Resolver struct {
@@ -149,9 +150,10 @@ var _default = Config{
 		Resolver: "1.1.1.1:53",
 	},
 	Dns: dns{
-		Enable: &_true,
-		Listen: "127.1.1.53",
-		Render: &_true,
+		Enable:     &_true,
+		Listen:     "127.1.1.53",
+		Render:     &_true,
+		Resolvectl: &_true,
 		Resolvers: []Resolver{
 			{IP: "1.1.1.1", Proto: "tcp", Port: 53, Rule: ""},
 		},

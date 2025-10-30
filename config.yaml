@@ -31,6 +31,7 @@ dns:
   enable: true
   listen: "127.1.1.53"
   render: true
+  resolvectl: true
   resolvers:
     # - ip: "127.1.2.53"
     #   port: 53
