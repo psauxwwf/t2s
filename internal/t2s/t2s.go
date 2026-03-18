@@ -17,6 +17,10 @@ import (
 	"t2s/pkg/shell"
 )
 
+const (
+	ipv4 = "100.64.255.2/32"
+)
+
 func lockf(m *sync.Mutex, f func() error) error {
 	m.Lock()
 	defer m.Unlock()
@@ -135,6 +139,9 @@ func (t *Tun2socksme) Shutdown() (err error) {
 func (t *Tun2socksme) Defgate() error {
 	if _, err := shell.New("ip", "link", "set", t.tun.Device(), "up").Run(); err != nil {
 		return fmt.Errorf("failed to up %s device: %w", t.tun.Device(), err)
+	}
+	if _, err := shell.New("ip", "addr", "add", ipv4, "dev", t.tun.Device()).Run(); err != nil {
+		return fmt.Errorf("failed to set %s on %s device: %w", ipv4, t.tun.Device(), err)
 	}
 	if !t.ipro.metricExists {
 		var args = append([]string{"route", "replace"},
