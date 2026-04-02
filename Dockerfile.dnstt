@@ -1,0 +1,26 @@
+FROM debian:trixie-slim
+
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    LANG=C.UTF-8 \
+    LC_ALL=C.UTF-8 \
+    TZ=UTC \
+    PATH="/dnstt:${PATH}"
+
+WORKDIR /dnstt
+
+RUN apt-get update --yes && \
+    apt-get install --yes --no-install-recommends \
+        curl=* \
+        ca-certificates=* && \
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+RUN curl --fail --show-error --location --remote-name https://dnstt.network/dnstt-server-linux-amd64 && \
+    chmod +x dnstt-server-linux-amd64
+
+COPY entrypoint.dnstt.sh entrypoint.sh
+
+ENTRYPOINT [ "entrypoint.sh" ]
+
+CMD []

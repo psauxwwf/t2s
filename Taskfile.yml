@@ -57,3 +57,20 @@ tasks:
       - |
         TAG=$(date +%m.%d.%H)
         gh release create "$TAG" {{.release_linux_archive}}
+
+  build:docker:dnstt:
+    desc: build docker dnstt server image
+    cmds:
+      - docker compose -f docker-compose.dnstt.yaml build
+
+  docker:dnstt:up:
+    desc: build docker dnstt server and up image
+    cmds:
+      - docker compose -f docker-compose.dnstt.yaml up --build --force-recreate
+
+  docker:dnstt:push:
+    desc: push docker dnstt server image
+    deps:
+      - build:docker:dnstt
+    cmds:
+      - docker compose -f docker-compose.dnstt.yaml push
