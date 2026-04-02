@@ -1,0 +1,16 @@
+services:
+  dnstt:
+    build:
+      context: .
+      dockerfile: Dockerfile.dnstt
+    image: ghcr.io/devil666face/t2s:dnstt
+    container_name: dnstt
+    restart: unless-stopped
+    stop_grace_period: 20s
+    volumes:
+      - ./db/:/dnstt/db
+    environment:
+      - NS_QUERY=${NS_QUERY}
+      - DNS_PORT=${DNS_PORT:-:53}
+      - UPSTREAM=${UPSTREAM:-127.0.0.1:1080}
+    network_mode: "host"
