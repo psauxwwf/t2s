@@ -1,5 +1,7 @@
 version: "3"
 
+dotenv: ["build.env"]
+
 vars:
   gobin: go
   ldflags: "-extldflags '-static' -w -s -buildid="
@@ -8,37 +10,30 @@ vars:
   bin: "{{.PWD}}/bin"
   app: "t2s"
   app_bin: "{{.bin}}/{{.app}}"
-  remote_user: root
-  remote_host: 192.168.200.53
-  remote_dir: "~/"
+  release_linux_archive: "{{.bin}}/{{.app}}_linux_amd64.tar.gz"
 
 env:
   CGO_ENABLED: 0
   GOARCH: amd64
   GOOS: linux
-  COMPOSE_BAKE: true
 
 tasks:
   setup:
     desc: set up the environment
+    internal: true
     silent: true
     cmds:
       - mkdir -p {{.bin}}
 
-  debug:
-    desc: debug build
-    deps: [setup]
-    silent: true
-    cmds:
-      - >
-        {{.gobin}} build
-        -tags netgo
-        -gcflags "all=-N -l"
-        -o {{.app_bin}}_debug cmd/{{.app}}/main.go
-
   build:
     desc: common build
-    deps: [setup]
+    deps:
+      - build:linux
+
+  build:linux:
+    desc: build for linux amd64
+    deps:
+      - setup
     silent: true
     cmds:
       - >
@@ -53,38 +48,12 @@ tasks:
       - objcopy --strip-unneeded {{.app_bin}}
 
   release:
-    desc: release
-    deps: [build]
+    desc: build and publish github release
+    deps:
+      - build
     silent: false
     cmds:
-      - rm -rf {{.app_bin}}_linux_amd64.tar.gz
-      - tar -cvzf {{.app_bin}}_linux_amd64.tar.gz -C {{.bin}} $(find {{.bin}} -maxdepth 1 -type f -printf "%f ")
-
-  in-docker-build:
-    deps: [build]
-    silent: false
-    cmds:
-      - mv {{.app_bin}} /build/bin
-
-  docker.build:
-    desc: build bin via docker
-    deps: [setup]
-    silent: false
-    cmds:
-      - docker compose -f docker-compose.build.yaml up --build --force-recreate
-
-  test:
-    desc: Build and run
-    deps: [build]
-    silent: true
-    cmds:
-      - sudo {{.bin}}/{{.app}} -config config.override.yaml
-
-  test-remote:
-    desc: Run on remote with scp
-    deps: [build]
-    silent: true
-    cmds:
-      - scp {{.app_bin}} {{.remote_user}}@{{.remote_host}}:{{.remote_dir}}
-      - scp config.override.yaml {{.remote_user}}@{{.remote_host}}:{{.remote_dir}}
-      # - ssh {{.remote_user}}@{{.remote_host}} 'sudo {{.remote_dir}}/{{.app}} -config config.override.yaml'
+      - tar -czf {{.release_linux_archive}} -C {{.bin}} {{.app}}
+      - |
+        TAG=$(date +%m.%d.%H)
+        gh release create "$TAG" {{.release_linux_archive}}

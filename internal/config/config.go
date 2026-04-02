@@ -7,6 +7,7 @@ import (
 	"os/user"
 	"path/filepath"
 	"regexp"
+	"slices"
 
 	"t2s/pkg/fs"
 	"t2s/pkg/net"
@@ -37,16 +38,11 @@ var ErrProtoConains = fmt.Errorf("proto must be one of %s/%s/%s",
 )
 
 func protoContains(proto string) bool {
-	for _, p := range []string{
+	return slices.Contains([]string{
 		SocksProto,
 		SsProto,
 		RelayProto,
-	} {
-		if p == proto {
-			return true
-		}
-	}
-	return false
+	}, proto)
 }
 
 type proxy struct {
