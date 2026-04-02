@@ -68,7 +68,7 @@ func Dnstt(_config *config.Config) (Tunnable, error) {
 		New(
 			_config.Interface.Device,
 			config.SocksProto,
-			"", "", "127.0.0.1", "",
+			_config.Dnstt.Username, _config.Dnstt.Password, "127.0.0.1", "",
 			1080,
 		),
 	), nil
