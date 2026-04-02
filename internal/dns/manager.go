@@ -138,7 +138,7 @@ func (m *manager) Repair() error {
 }
 
 func render(path, format, a string) error {
-	if err := fs.WriteFile(path, []byte(fmt.Sprintf(format, a))); err != nil {
+	if err := fs.WriteFile(path, fmt.Appendf(nil, format, a)); err != nil {
 		return fmt.Errorf("failed to render: %w", err)
 	}
 	return nil
