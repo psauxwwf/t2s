@@ -86,6 +86,8 @@ type dnstt struct {
 	Resolver string `yaml:"resolver" env-description:"recursive udp dns resolver>" env-default:"1.1.1.1:53"`
 	Pubkey   string `yaml:"pubkey" env-description:"pubkey as string" env-default:""`
 	Domain   string `yaml:"domain" env-description:"NS record on your domain with dnstt server" env-default:""`
+	Username string `yaml:"username" env-description:"username for remote socks5 proxy" env-default:""`
+	Password string `yaml:"password" env-description:"password for remote socks5 proxy" env-default:""`
 	IP       string `yaml:"-"`
 }
 
@@ -142,8 +144,17 @@ var _default = Config{
 		Port: 22,
 		Args: []string{},
 	},
+	Chisel: chisel{
+		Server:   "https://chisel.domain.xyz",
+		Username: "username",
+		Password: "password",
+	},
 	Dnstt: dnstt{
 		Resolver: "1.1.1.1:53",
+		Pubkey:   "key",
+		Domain:   "t.domain.xyz",
+		Username: "username",
+		Password: "password",
 	},
 	Dns: dns{
 		Enable:     &_true,

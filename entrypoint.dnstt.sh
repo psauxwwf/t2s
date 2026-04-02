@@ -11,6 +11,7 @@ fi
 if [[ $# -eq 0 ]]; then
 	exec dnstt-server-linux-amd64 \
 		-udp "${DNS_PORT:-:53}" \
+		-mtu "${MTU:-512}" \
 		-privkey-file db/server.key \
 		"$NS_QUERY" \
 		"${UPSTREAM:-127.0.0.1:1080}"

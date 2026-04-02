@@ -9,8 +9,10 @@ services:
     stop_grace_period: 20s
     volumes:
       - ./db/:/dnstt/db
+    # NOT USE " "
     environment:
       - NS_QUERY=${NS_QUERY}
       - DNS_PORT=${DNS_PORT:-:53}
       - UPSTREAM=${UPSTREAM:-127.0.0.1:1080}
+      - MTU=${MTU:-512}
     network_mode: "host"
