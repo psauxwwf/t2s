@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net"
 	"sync"
 	"time"
@@ -155,17 +156,17 @@ func (d *dnsttclient) run() error {
 	if mtu < 80 {
 		return fmt.Errorf("domain %s leaves only %d bytes for payload", d.domain, mtu)
 	}
-	fmt.Printf("effective MTU %d\n", mtu)
+	slog.Info("effective MTU", "mtu", mtu)
 
 	conn, err := kcp.NewConn2(d.remote, nil, 0, 0, d.pconn)
 	if err != nil {
 		return fmt.Errorf("opening KCP conn: %v", err)
 	}
 	defer func() {
-		fmt.Printf("end session %08x\n", conn.GetConv())
+		slog.Debug("end session", "conv", fmt.Sprintf("%08x", conn.GetConv()))
 		conn.Close()
 	}()
-	fmt.Printf("begin session %08x\n", conn.GetConv())
+	slog.Info("begin session", "conv", fmt.Sprintf("%08x", conn.GetConv()))
 
 	conn.SetStreamMode(true)
 
@@ -207,7 +208,7 @@ func (d *dnsttclient) run() error {
 			defer local.Close()
 			err := handle(local.(*net.TCPConn), sess, conn.GetConv())
 			if err != nil {
-				fmt.Printf("handle: %v\n", err)
+				slog.Warn("handle", "error", err)
 			}
 		}()
 	}
@@ -231,10 +232,10 @@ func handle(local *net.TCPConn, sess *smux.Session, conv uint32) error {
 		return fmt.Errorf("session %08x opening stream: %v", conv, err)
 	}
 	defer func() {
-		fmt.Printf("end stream %08x:%d\n", conv, stream.ID())
+		slog.Debug("end stream", "conv", fmt.Sprintf("%08x", conv), "stream_id", stream.ID())
 		stream.Close()
 	}()
-	fmt.Printf("begin stream %08x:%d\n", conv, stream.ID())
+	slog.Debug("begin stream", "conv", fmt.Sprintf("%08x", conv), "stream_id", stream.ID())
 
 	var wg sync.WaitGroup
 	wg.Add(2)
@@ -246,7 +247,7 @@ func handle(local *net.TCPConn, sess *smux.Session, conv uint32) error {
 			err = nil
 		}
 		if err != nil && !errors.Is(err, io.ErrClosedPipe) {
-			fmt.Printf("stream %08x:%d copy stream←local: %v\n", conv, stream.ID(), err)
+			slog.Warn("copy stream<-local", "conv", fmt.Sprintf("%08x", conv), "stream_id", stream.ID(), "error", err)
 		}
 		local.CloseRead()
 		stream.Close()
@@ -259,7 +260,7 @@ func handle(local *net.TCPConn, sess *smux.Session, conv uint32) error {
 			err = nil
 		}
 		if err != nil && !errors.Is(err, io.ErrClosedPipe) {
-			fmt.Printf("stream %08x:%d copy local←stream: %v\n", conv, stream.ID(), err)
+			slog.Warn("copy local<-stream", "conv", fmt.Sprintf("%08x", conv), "stream_id", stream.ID(), "error", err)
 		}
 		local.CloseWrite()
 	}()
@@ -286,13 +287,13 @@ func NewDNSPacketConn(transport net.PacketConn, addr net.Addr, domain dns.Name) 
 	go func() {
 		err := c.recvLoop(transport)
 		if err != nil {
-			fmt.Printf("recvLoop: %v\n", err)
+			slog.Warn("recvLoop", "error", err)
 		}
 	}()
 	go func() {
 		err := c.sendLoop(transport, addr)
 		if err != nil {
-			fmt.Printf("sendLoop: %v\n", err)
+			slog.Warn("sendLoop", "error", err)
 		}
 	}()
 	return c
@@ -354,7 +355,7 @@ func (c *DNSPacketConn) recvLoop(transport net.PacketConn) error {
 		n, addr, err := transport.ReadFrom(buf[:])
 		if err != nil {
 			if err, ok := err.(net.Error); ok && err.Temporary() {
-				fmt.Printf("ReadFrom temporary error: %v\n", err)
+				slog.Debug("ReadFrom temporary error", "error", err)
 				continue
 			}
 			return err
@@ -362,7 +363,7 @@ func (c *DNSPacketConn) recvLoop(transport net.PacketConn) error {
 
 		resp, err := dns.MessageFromWireFormat(buf[:n])
 		if err != nil {
-			fmt.Printf("MessageFromWireFormat: %v\n", err)
+			slog.Debug("MessageFromWireFormat", "error", err)
 			continue
 		}
 
@@ -505,7 +506,7 @@ func (c *DNSPacketConn) sendLoop(transport net.PacketConn, addr net.Addr) error 
 
 		err := c.send(transport, p, addr)
 		if err != nil {
-			fmt.Printf("send: %v\n", err)
+			slog.Debug("send", "error", err)
 			continue
 		}
 	}

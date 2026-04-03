@@ -2,6 +2,7 @@ package t2s
 
 import (
 	"fmt"
+	"log/slog"
 	"strconv"
 	"strings"
 	"t2s/pkg/shell"
@@ -59,7 +60,7 @@ func getMetric(s []string, metric int) (int, bool) {
 		}
 		metricExists = true
 		if m, err := strconv.Atoi(s[i+1]); err == nil && metric >= m {
-			fmt.Printf("default metric %d is more then existed metric %d set metric=%d\n", metric, m, m/2)
+			slog.Warn("metric adjusted", "default_metric", metric, "existing_metric", m, "set_metric", m/2)
 			return m / 2, metricExists
 		}
 		// return metric
