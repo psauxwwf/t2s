@@ -22,7 +22,7 @@ func wrapSsh(
 ) *ssh {
 	return &ssh{
 		config.Ssh.Username, config.Ssh.Host, config.Ssh.Args,
-		config.Ssh.Port, config.Ssh.LocalPort,
+		config.Ssh.Port, config.RelayPort,
 		0,
 		tun,
 	}
@@ -37,7 +37,7 @@ func Ssh(_config *config.Config) (Tunnable, error) {
 			_config.Interface.Device,
 			config.ProtoSocks,
 			"", "", "127.0.0.1", "",
-			_config.Ssh.LocalPort,
+			_config.RelayPort,
 		),
 	), nil
 }

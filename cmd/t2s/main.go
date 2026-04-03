@@ -42,6 +42,8 @@ func main() {
 		os.Exit(configCode)
 	}
 
+	fmt.Println("local relay port:", _config.RelayPort)
+
 	_dns, err := dns.New(
 		_config.Dns.Listen,
 		_config.Dns.Resolvers,
