@@ -2,7 +2,6 @@ package shell
 
 import (
 	"fmt"
-	"log"
 	"os/exec"
 	"strings"
 )
@@ -24,7 +23,7 @@ func (c *Command) String() string {
 }
 
 func (c *Command) Log() {
-	log.Println(c)
+	fmt.Println(c)
 }
 
 func (c *Command) WithEnv(env []string) *Command {

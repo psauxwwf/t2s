@@ -8,7 +8,7 @@ socks:
   proto: "socks5" # socks5/ss/relay
   username: "username"
   password: "password"
-  host: "100.3.3.7"
+  host: "1.3.3.7"
   port: 1080
 ```
 
@@ -28,7 +28,7 @@ proxy:
 ---
 ssh:
   username: "user"
-  host: "100.3.3.7"
+  host: "1.3.3.7"
   port: 1337
   extra: ""
 ```
@@ -41,7 +41,7 @@ ssh:
 ```bash
 wget https://github.com/shadowsocks/go-shadowsocks2/releases/download/v0.1.5/shadowsocks2-linux.tgz
 tar -xf shadowsocks2-linux.tgz
-shadowsocks2-linux -s 'ss://AEAD_CHACHA20_POLY1305:password@100.3.3.7:1080' -verbose
+shadowsocks2-linux -s 'ss://AEAD_CHACHA20_POLY1305:password@1.3.3.7:1080' -verbose
 ```
 
 ```yaml
@@ -52,7 +52,7 @@ socks:
   proto: "ss"
   username: "AEAD_CHACHA20_POLY1305"
   password: "password"
-  host: "100.3.3.7"
+  host: "1.3.3.7"
   port: 1080
   extra: ""
 ```
@@ -66,7 +66,7 @@ ss://method:password@server_host:port/<?obfs=http;obfs-host=xxx>
 ```bash
 wget https://github.com/go-gost/gost/releases/download/v3.0.0/gost_3.0.0_linux_amd64.tar.gz
 tar -xf gost_3.0.0_linux_amd64.tar.gz
-gost -L=relay://username:password@100.3.3.7:1080
+gost -L=relay://username:password@1.3.3.7:1080
 ```
 
 ```yaml
@@ -77,7 +77,7 @@ socks:
   proto: "relay" # socks5/ss/relay
   username: "username"
   password: "password"
-  host: "100.3.3.7"
+  host: "1.3.3.7"
   port: 1080
   extra: ""
 ```
@@ -106,10 +106,10 @@ UseBridges 1
 ClientTransportPlugin obfs4 exec /usr/bin/obfs4proxy
 ExcludeExitNodes {ru},{by},{cn}
 
-Bridge obfs4 212.21.66.73:35401 C36F8D3C481910ED7A34F5ECEBE1C7C9A258F4A8 cert=9IygPQi2UKJ6pUjYTHl8ltg1cuPDvcsE9Os9TPVSioR0qmXU/0uSvD3rsm3jskV1nupJAg iat-mode=2
-Bridge obfs4 140.186.139.199:4444 A17E0D3FE22FA225EB4ACFEF242DBD1C71ED1D6B cert=4xg9Uri1mhV9PaHX7J4Uc2y/6VLdSiwJO8TQFDE8g0f0M1hGjQYfkO39h+sIw+L3vR1IeQ iat-mode=0
-Bridge obfs4 141.95.106.45:12558 F1A7BBDED674C0654B04ED387FFCB1A5DD2B2ED5 cert=TWRS4j6AKbKH/SL/bAqHkP7fI7C3P3dQoV+D8pRgqcJCK+r4SvZhg3k661ikgg732nuADA iat-mode=0
-Bridge obfs4 54.38.138.85:21641 E8D24300464D24AB6D905B3D01029E010363D731 cert=g7Gsuzkk2ZG88oslXKYx/Cn1XHj3DaAJRKARzN1kHrfa4B4mTCjF/0v+d1HxUr4ujYvXCQ iat-mode=0
+Bridge obfs4 1.3.3.12:35401 C36F8D3C481910ED7A34F5ECEBE1C7C9A258F4A8 cert=9IygPQi2UKJ6pUjYTHl8ltg1cuPDvcsE9Os9TPVSioR0qmXU/0uSvD3rsm3jskV1nupJAg iat-mode=2
+Bridge obfs4 1.3.3.13:4444 A17E0D3FE22FA225EB4ACFEF242DBD1C71ED1D6B cert=4xg9Uri1mhV9PaHX7J4Uc2y/6VLdSiwJO8TQFDE8g0f0M1hGjQYfkO39h+sIw+L3vR1IeQ iat-mode=0
+Bridge obfs4 1.3.3.14:12558 F1A7BBDED674C0654B04ED387FFCB1A5DD2B2ED5 cert=TWRS4j6AKbKH/SL/bAqHkP7fI7C3P3dQoV+D8pRgqcJCK+r4SvZhg3k661ikgg732nuADA iat-mode=0
+Bridge obfs4 1.3.3.15:21641 E8D24300464D24AB6D905B3D01029E010363D731 cert=g7Gsuzkk2ZG88oslXKYx/Cn1XHj3DaAJRKARzN1kHrfa4B4mTCjF/0v+d1HxUr4ujYvXCQ iat-mode=0
 ```
 
 _Check_
@@ -133,10 +133,10 @@ proxy:
 interface:
   device: "tun0"
   exclude:
-    - "54.38.138.85"
-    - "140.186.139.199"
-    - "141.95.106.45"
-    - "212.21.66.73"
+    - "1.3.3.15"
+    - "1.3.3.13"
+    - "1.3.3.14"
+    - "1.3.3.12"
     - "10.0.0.0/8"
     - "172.16.0.0/12"
     - "192.168.0.0/16"
@@ -238,8 +238,8 @@ interface:
     - 172.16.0.0/12
     - 192.168.0.0/16
   custom_routes:
-    - 104.21.88.227/32 via 192.168.0.1 dev wlp3s0 # routes for cloudflare servers
-    - 172.67.153.180/32 via 192.168.0.1 dev wlp3s0 # routes for cloudflare servers
+    - 1.3.3.10/32 via 192.168.0.1 dev wlp3s0 # routes for cloudflare servers
+    - 1.3.3.11/32 via 192.168.0.1 dev wlp3s0 # routes for cloudflare servers
   metric: 512
   sleep: 5 # sleep for connect to cloudflare
 socks:
@@ -270,7 +270,7 @@ dns:
       port: 53
       rule: ""
   records:
-    ssh.host.com: 172.67.153.180 # lookup your host (same as cloudflare servers)
+    ssh.host.com: 1.3.3.11 # lookup your host (same as cloudflare servers)
 ```
 
 ### Custom records for dns
@@ -314,15 +314,15 @@ dns:
 
 ```bash
 ss -tunp | grep ssh
-tcp    ESTAB   0        36         85.239.54.158:56777     79.140.111.66:47284   users:(("sshd",pid=1627,fd=4))
-tcp    ESTAB   0        0          85.239.54.158:56777     79.140.111.66:47152   users:(("sshd",pid=1278,fd=4))
+tcp    ESTAB   0        36         1.3.3.9:56777     1.3.3.8:47284   users:(("sshd",pid=1627,fd=4))
+tcp    ESTAB   0        0          1.3.3.9:56777     1.3.3.8:47152   users:(("sshd",pid=1278,fd=4))
 ```
 
 ```yaml
 interface:
   device: "tun0"
   exclude:
-    - "79.140.111.66"
+    - "1.3.3.8"
     - "10.0.0.0/8"
     - "172.16.0.0/12"
     - "192.168.0.0/16"
