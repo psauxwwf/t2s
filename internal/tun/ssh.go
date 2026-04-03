@@ -2,7 +2,9 @@ package tun
 
 import (
 	"fmt"
+
 	"t2s/internal/config"
+
 	"t2s/pkg/shell"
 )
 
@@ -33,7 +35,7 @@ func Ssh(_config *config.Config) (Tunnable, error) {
 		_config,
 		New(
 			_config.Interface.Device,
-			config.SocksProto,
+			config.ProtoSocks,
 			"", "", "127.0.0.1", "",
 			_config.Ssh.LocalPort,
 		),

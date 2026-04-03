@@ -1,8 +1,8 @@
 package config
 
 import (
+	"errors"
 	"fmt"
-	"log"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -12,7 +12,6 @@ import (
 	"t2s/pkg/fs"
 	"t2s/pkg/net"
 
-	"github.com/ilyakaznacheev/cleanenv"
 	"gopkg.in/yaml.v3"
 )
 
@@ -21,148 +20,162 @@ const (
 )
 
 const (
-	SocksType  = "socks"
-	SshType    = "ssh"
-	ChiselType = "chisel"
-	DnsttType  = "dnstt"
+	TypeSocks  = "socks"
+	TypeSsh    = "ssh"
+	TypeChisel = "chisel"
+	TypeDnstt  = "dnstt"
 )
 
 const (
-	SocksProto = "socks5"
-	SsProto    = "ss"
-	RelayProto = "relay"
+	ProtoSocks = "socks5"
+	ProtoSs    = "ss"
+	ProtoRelay = "relay"
 )
 
-var ErrProtoConains = fmt.Errorf("proto must be one of %s/%s/%s",
-	SocksProto, SsProto, RelayProto,
+var (
+	ErrProtoConains = fmt.Errorf("proto must be one of %s/%s/%s",
+		ProtoSocks, ProtoSs, ProtoRelay,
+	)
+	ErrNotExists = fmt.Errorf("config not found: %w", os.ErrNotExist)
 )
 
 func protoContains(proto string) bool {
 	return slices.Contains([]string{
-		SocksProto,
-		SsProto,
-		RelayProto,
+		ProtoSocks,
+		ProtoSs,
+		ProtoRelay,
 	}, proto)
 }
 
-type proxy struct {
-	Type string `yaml:"type" env-description:"type of proxy <socks/ssh/chisel/dnstt>" env-default:"socks"`
+type Proxy struct {
+	Type string `yaml:"type"`
 }
 
-type _inteface struct {
-	Device       string   `yaml:"device" env-description:"device name" env-default:"tun0"`
-	ExcludeNets  []string `yaml:"exclude" env-description:"not routing to proxy this nets" env-default:""`
-	CustomRoutes []string `yaml:"custom_routes" env-description:"custom routes" env-default:""`
-	Metric       int      `yaml:"metric" env-description:"metric priority in route" env-default:"512"`
-	Sleep        int      `yaml:"sleep" env-description:"sleep before set default gateway" env-default:"0"`
+type Interface struct {
+	Device       string   `yaml:"device"`
+	ExcludeNets  []string `yaml:"exclude"`
+	CustomRoutes []string `yaml:"custom_routes"`
+	Metric       int      `yaml:"metric"`
+	Sleep        int      `yaml:"sleep"`
 }
 
-type socks struct {
-	Proto    string `yaml:"proto" env-description:"proto <socks5/ss/relay>" env-default:"socks5"`
-	Username string `yaml:"username" env-description:"username for socks5 proxy" env-default:""`
-	Password string `yaml:"password" env-description:"password for socks5 proxy" env-default:""`
-	Host     string `yaml:"host" env-description:"ip address or hostname remote proxy" env-default:"127.0.0.1"`
-	Port     int    `yaml:"port" env-description:"socks5 port remote proxy" env-default:"1080"`
-	Args     string `yaml:"args" env-description:"socks5://username:password@host:port/<args>" env-default:""`
+type Socks struct {
+	Proto    string `yaml:"proto"`
+	Username string `yaml:"username"`
+	Password string `yaml:"password"`
+	Host     string `yaml:"host"`
+	Port     int    `yaml:"port"`
+	Args     string `yaml:"args"`
 }
 
-type ssh struct {
-	Username  string   `yaml:"username" env-description:"username for ssh" env-default:""`
-	Host      string   `yaml:"host" env-description:"host for ssh" env-default:""`
-	Port      int      `yaml:"port" env-description:"removte ssh port" env-default:"22"`
-	Args      []string `yaml:"args" env-description:"extra args for ssh like -J user@jumphost" env-default:""`
+type Ssh struct {
+	Username  string   `yaml:"username"`
+	Host      string   `yaml:"host"`
+	Port      int      `yaml:"port"`
+	Args      []string `yaml:"args"`
 	LocalPort int      `yaml:"-"`
 }
 
-type chisel struct {
-	Server   string `yaml:"server" env-description:"chisel server url <https://127.0.0.1>" env-default:""`
-	Username string `yaml:"username" env-description:"username for chisel" env-default:""`
-	Password string `yaml:"password" env-description:"password for chisel" env-default:""`
-	Proxy    string `yaml:"proxy" env-description:"run chisel via proxy <<http/socks5h/socks>://username:password@ip:port>" env-default:""`
+type Chisel struct {
+	Server   string `yaml:"server"`
+	Username string `yaml:"username"`
+	Password string `yaml:"password"`
+	Proxy    string `yaml:"proxy"`
 	IP       string `yaml:"-"`
 }
 
-type dnstt struct {
-	Resolver string `yaml:"resolver" env-description:"recursive udp dns resolver>" env-default:"1.1.1.1:53"`
-	Pubkey   string `yaml:"pubkey" env-description:"pubkey as string" env-default:""`
-	Domain   string `yaml:"domain" env-description:"NS record on your domain with dnstt server" env-default:""`
-	Username string `yaml:"username" env-description:"username for remote socks5 proxy" env-default:""`
-	Password string `yaml:"password" env-description:"password for remote socks5 proxy" env-default:""`
+type Dnstt struct {
+	Resolver string `yaml:"resolver"`
+	Pubkey   string `yaml:"pubkey"`
+	Domain   string `yaml:"domain"`
+	Username string `yaml:"username"`
+	Password string `yaml:"password"`
 	IP       string `yaml:"-"`
 }
 
-type dns struct {
-	Enable     *bool             `yaml:"enable" env-description:"enable dns server" env-default:"true"`
-	Listen     string            `yaml:"listen" env-description:"listen local dns" env-default:"127.1.1.53"`
-	Render     *bool             `yaml:"render" env-description:"render resolvconf on local dns" env-default:"true"`
-	Resolvectl *bool             `yaml:"resolvectl" env-description:"set resolvectl on local dns" env-default:"true"`
-	Resolvers  []Resolver        `yaml:"resolvers" env-description:"dns resolvers" env-default:""`
-	Records    map[string]string `yaml:"records" env-description:"custom records <1.3.3.7: 'leet.com'>" env-default:""`
+type Dns struct {
+	Enable     *bool             `yaml:"enable"`
+	Listen     string            `yaml:"listen"`
+	Render     *bool             `yaml:"render"`
+	Resolvectl *bool             `yaml:"resolvectl"`
+	Resolvers  []Resolver        `yaml:"resolvers"`
+	Records    map[string]string `yaml:"records"`
 }
 
 type Resolver struct {
-	IP    string         `yaml:"ip" env-description:"resolver ip" env-default:"1.1.1.1"`
-	Proto string         `yaml:"proto" env-description:"resolver proto <tcp/udp>" env-default:"tcp"`
-	Port  int            `yaml:"port" env-description:"resolver port" env-default:"53"`
-	Rule  string         `yaml:"rule" env-description:"allow regular for domains" env-default:".*"`
+	IP    string         `yaml:"ip"`
+	Proto string         `yaml:"proto"`
+	Port  int            `yaml:"port"`
+	Rule  string         `yaml:"rule"`
 	Re    *regexp.Regexp `yaml:"-"`
 }
 
 type Config struct {
-	Proxy     proxy     `yaml:"proxy" env-description:"proxy type"`
-	Interface _inteface `yaml:"interface" env-description:"interface params"`
-	Socks     socks     `yaml:"socks" env-description:"proxy via socks5"`
-	Ssh       ssh       `yaml:"ssh" env-description:"proxy via ssh params"`
-	Chisel    chisel    `yaml:"chisel" env-description:"proxy via chisel"`
-	Dnstt     dnstt     `yaml:"dnstt" env-description:"proxy via dnstt"`
-	Dns       dns       `yaml:"dns" env-description:"dns params"`
+	Proxy     Proxy     `yaml:"proxy"`
+	Interface Interface `yaml:"interface"`
+	Socks     Socks     `yaml:"socks"`
+	Ssh       Ssh       `yaml:"ssh"`
+	Chisel    Chisel    `yaml:"chisel"`
+	Dnstt     Dnstt     `yaml:"dnstt"`
+	Dns       Dns       `yaml:"dns"`
 }
 
-var _true = true
-
 var _default = Config{
-	Interface: _inteface{
+	Interface: Interface{
 		Device: "tun0",
 		ExcludeNets: []string{
 			"10.0.0.0/8",
 			"172.16.0.0/12",
 			"192.168.0.0/16",
 		},
-		CustomRoutes: []string{},
-		Metric:       512,
-		Sleep:        0,
+		CustomRoutes: []string{
+			"104.21.88.227/32 via 192.168.0.1 dev wlp3s0",
+			"172.67.153.180/32 via 192.168.0.1 dev wlp3s0",
+		},
+		Metric: 512,
+		Sleep:  0,
 	},
-	Proxy: proxy{
+	Proxy: Proxy{
 		Type: "socks",
 	},
-	Socks: socks{
-		Proto: "socks5",
-		Host:  "127.0.0.1",
-		Port:  1080,
+	Socks: Socks{
+		Proto:    "socks5",
+		Username: "username",
+		Password: "password",
+		Host:     "100.3.3.7",
+		Port:     1080,
+		Args:     "nodelay=true",
 	},
-	Ssh: ssh{
-		Port: 22,
-		Args: []string{},
+	Ssh: Ssh{
+		Username: "user",
+		Host:     "ssh.host.com",
+		Port:     22,
+		Args: []string{
+			"-o",
+			"ProxyCommand=cloudflared access ssh --hostname %h",
+		},
 	},
-	Chisel: chisel{
+	Chisel: Chisel{
 		Server:   "https://chisel.domain.xyz",
 		Username: "username",
 		Password: "password",
+		Proxy:    "socks5h://proxy_username:proxy_password@1.3.3.7:1080",
 	},
-	Dnstt: dnstt{
+	Dnstt: Dnstt{
 		Resolver: "1.1.1.1:53",
 		Pubkey:   "key",
 		Domain:   "t.domain.xyz",
 		Username: "username",
 		Password: "password",
 	},
-	Dns: dns{
-		Enable:     &_true,
+	Dns: Dns{
+		Enable:     new(true),
 		Listen:     "127.1.1.53",
-		Render:     &_true,
-		Resolvectl: &_true,
+		Render:     new(true),
+		Resolvectl: new(true),
 		Resolvers: []Resolver{
-			{IP: "1.1.1.1", Proto: "tcp", Port: 53, Rule: ""},
+			{IP: "1.1.1.1", Proto: "tcp", Port: 53, Rule: ".*"},
+			{IP: "10.10.10.10", Proto: "udp", Port: 53, Rule: `.*github\.com`},
 		},
 		Records: map[string]string{
 			"test.lan": "10.10.10.10",
@@ -170,37 +183,52 @@ var _default = Config{
 	},
 }
 
-func defaultPath() string {
+func defaultPath() (string, error) {
 	if xdg := os.Getenv("XDG_CONFIG_HOME"); xdg != "" {
-		return filepath.Join(xdg, config)
+		return filepath.Join(xdg, config), nil
 	}
-	if _user, err := user.Current(); err == nil {
-		return filepath.Join(_user.HomeDir, ".config", "t2s", config)
+	_user, err := user.Current()
+	if err != nil {
+		return "", fmt.Errorf("failed to detect config path: %w", err)
 	}
-	return ""
+	return filepath.Join(_user.HomeDir, ".config", "t2s", config), nil
+}
+
+func Default(path string) error {
+	if path == "" {
+		_path, err := defaultPath()
+		if err != nil {
+			return err
+		}
+		path = _path
+	}
+	return _default.Save(path)
 }
 
 func New(filename string) (*Config, error) {
 	if filename == "" {
-		filename = defaultPath()
+		_path, err := defaultPath()
+		if err != nil {
+			return nil, err
+		}
+		filename = _path
 	}
-	log.Println("read config:", filename)
 
 	port, err := net.RandomPort()
 	if err != nil {
 		port = 31888
 	}
-	_config := Config{
-		Ssh: ssh{LocalPort: port},
-	}
+	_config := _default
+	_config.Ssh.LocalPort = port
 
-	if err := cleanenv.ReadConfig(filename, &_config); err != nil {
-		if os.IsNotExist(err) {
-			if err := _default.Save(filename); err != nil {
-				log.Println("default config error: %w", err)
-			}
-			return &_default, fmt.Errorf("use default path to config: %s", filename)
+	data, err := os.ReadFile(filename)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil, ErrNotExists
 		}
+		return nil, fmt.Errorf("failed to read config: %w", err)
+	}
+	if err := yaml.Unmarshal(data, &_config); err != nil {
 		return nil, fmt.Errorf("failed to load config: %w", err)
 	}
 
@@ -218,11 +246,11 @@ func New(filename string) (*Config, error) {
 }
 
 func (c *Config) lookup() error {
-	if c.Proxy.Type == ChiselType {
+	if c.Proxy.Type == TypeChisel {
 		c.Chisel.IP = net.ResolveHost(c.Chisel.Server)
 		c.Dns.Records[net.GetDomain(c.Chisel.Server)] = c.Chisel.IP
 	}
-	if c.Proxy.Type == DnsttType {
+	if c.Proxy.Type == TypeDnstt {
 		c.Dnstt.IP = net.ToIP(c.Dnstt.Resolver)
 	}
 	return nil
@@ -246,11 +274,18 @@ func (c *Config) prepareResolvers() (err error) {
 }
 
 func (c *Config) Save(path string) error {
+	var err error
+	if path == "" {
+		path, err = defaultPath()
+		if err != nil {
+			return err
+		}
+	}
 	data, err := yaml.Marshal(&c)
 	if err != nil {
 		return fmt.Errorf("failed to marshall config: %w", err)
 	}
-	if err := os.MkdirAll(filepath.Dir(path), 0o644); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return fmt.Errorf("failed to save default config: %w", err)
 	}
 	if err := fs.WriteFile(path, data); err != nil {
