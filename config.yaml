@@ -31,11 +31,9 @@ chisel:
   password: password
   proxy: socks5h://proxy_username:proxy_password@1.3.3.7:1080
 dnstt:
-  resolver: udp://1.1.1.1:53
-  # examples:
-  # - udp://8.8.8.8:53
-  # - dot://8.8.8.8:853
-  # - https://dns.google/dns-query
+  resolver: udp://8.8.8.8:53
+  # resolver: dot://8.8.8.8:853
+  # resolver: https://dns.google/dns-query
   pubkey: key
   domain: t.domain.xyz
   username: username
@@ -46,7 +44,7 @@ dns:
   render: true
   resolvectl: true
   resolvers:
-    - ip: 1.1.1.1
+    - ip: 8.8.8.8
       proto: tcp
       port: 53
       rule: .*
