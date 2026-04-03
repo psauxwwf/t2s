@@ -1,3 +1,1 @@
-- [ ] default_gateway: true
-- [ ] include: - 10.10.10.1/24
-- [ ] connect via ssh too
+- [ ] doh dot to dnstt

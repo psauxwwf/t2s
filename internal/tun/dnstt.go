@@ -1,8 +1,11 @@
 package tun
 
 import (
+	"bufio"
 	"bytes"
+	"context"
 	"crypto/rand"
+	"crypto/tls"
 	"encoding/base32"
 	"encoding/binary"
 	"errors"
@@ -10,6 +13,9 @@ import (
 	"io"
 	"log/slog"
 	"net"
+	"net/http"
+	"net/url"
+	"strconv"
 	"sync"
 	"time"
 
@@ -34,6 +40,11 @@ const (
 )
 
 var base32Encoding = base32.StdEncoding.WithPadding(base32.NoPadding)
+
+const (
+	defaultRetryAfter = 10 * time.Second
+	dialTimeout       = 30 * time.Second
+)
 
 type dnstt struct {
 	resolver, pubkey, domain, listen string
@@ -119,17 +130,7 @@ func getDnstt(
 		return nil, fmt.Errorf("len of pubkey is 0")
 	}
 
-	_remote, _pconn, err := func(s string) (net.Addr, net.PacketConn, error) {
-		remote, err := net.ResolveUDPAddr("udp", s)
-		if err != nil {
-			return nil, nil, fmt.Errorf("resolve udp error: %w", err)
-		}
-		conn, err := net.ListenUDP("udp", nil)
-		if err != nil {
-			return nil, nil, fmt.Errorf("upd error: %w", err)
-		}
-		return remote, conn, err
-	}(resolver)
+	_remote, _pconn, err := resolverConn(resolver)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create dnstt obj: %w", err)
 	}
@@ -141,6 +142,59 @@ func getDnstt(
 		remote: _remote,
 		pconn:  NewDNSPacketConn(_pconn, _remote, _domain),
 	}, nil
+}
+
+func resolverConn(resolver string) (net.Addr, net.PacketConn, error) {
+	u, err := url.Parse(resolver)
+	if err != nil {
+		return nil, nil, fmt.Errorf("parse resolver: %w", err)
+	}
+
+	switch u.Scheme {
+	case "", "udp":
+		addr := resolver
+		if u.Scheme == "udp" {
+			addr = hostPortFromURL(u, "53")
+		}
+		remote, err := net.ResolveUDPAddr("udp", addr)
+		if err != nil {
+			return nil, nil, fmt.Errorf("resolve udp error: %w", err)
+		}
+		conn, err := net.ListenUDP("udp", nil)
+		if err != nil {
+			return nil, nil, fmt.Errorf("udp listen error: %w", err)
+		}
+		return remote, conn, nil
+	case "dot":
+		addr := hostPortFromURL(u, "853")
+		conn, err := NewTLSPacketConn(addr, (&tls.Dialer{}).DialContext)
+		if err != nil {
+			return nil, nil, fmt.Errorf("create dot conn: %w", err)
+		}
+		return turbotunnel.DummyAddr{}, conn, nil
+	case "https":
+		transport := http.DefaultTransport.(*http.Transport).Clone()
+		transport.Proxy = nil
+		conn, err := NewHTTPPacketConn(transport, resolver, 32)
+		if err != nil {
+			return nil, nil, fmt.Errorf("create doh conn: %w", err)
+		}
+		return turbotunnel.DummyAddr{}, conn, nil
+	default:
+		return nil, nil, fmt.Errorf("unsupported resolver scheme: %q", u.Scheme)
+	}
+}
+
+func hostPortFromURL(u *url.URL, defaultPort string) string {
+	host := u.Hostname()
+	if host == "" {
+		return u.Host
+	}
+	port := u.Port()
+	if port == "" {
+		port = defaultPort
+	}
+	return net.JoinHostPort(host, port)
 }
 
 func (d *dnsttclient) run() error {
@@ -510,4 +564,190 @@ func (c *DNSPacketConn) sendLoop(transport net.PacketConn, addr net.Addr) error 
 			continue
 		}
 	}
+}
+
+type HTTPPacketConn struct {
+	client    *http.Client
+	urlString string
+
+	notBefore     time.Time
+	notBeforeLock sync.RWMutex
+
+	*turbotunnel.QueuePacketConn
+}
+
+func NewHTTPPacketConn(rt http.RoundTripper, urlString string, numSenders int) (*HTTPPacketConn, error) {
+	c := &HTTPPacketConn{
+		client: &http.Client{
+			Transport: rt,
+			Timeout:   1 * time.Minute,
+		},
+		urlString:       urlString,
+		QueuePacketConn: turbotunnel.NewQueuePacketConn(turbotunnel.DummyAddr{}, 0),
+	}
+	for range numSenders {
+		go c.sendLoop()
+	}
+	return c, nil
+}
+
+func (c *HTTPPacketConn) send(p []byte) error {
+	req, err := http.NewRequest(http.MethodPost, c.urlString, bytes.NewReader(p))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Accept", "application/dns-message")
+	req.Header.Set("Content-Type", "application/dns-message")
+	req.Header.Set("User-Agent", "")
+
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	switch resp.StatusCode {
+	case http.StatusOK:
+		if ct := resp.Header.Get("Content-Type"); ct != "application/dns-message" {
+			return fmt.Errorf("unknown HTTP response Content-Type %q", ct)
+		}
+		body, err := io.ReadAll(io.LimitReader(resp.Body, 64000))
+		if err == nil {
+			c.QueuePacketConn.QueueIncoming(body, turbotunnel.DummyAddr{})
+		}
+	default:
+		now := time.Now()
+		var retryAfter time.Time
+		if value := resp.Header.Get("Retry-After"); value != "" {
+			retryAfter, err = parseRetryAfter(value, now)
+			if err != nil {
+				slog.Warn("cannot parse Retry-After", "value", value, "error", err)
+			}
+		}
+		if retryAfter.IsZero() {
+			retryAfter = now.Add(defaultRetryAfter)
+		}
+		if retryAfter.Before(now) {
+			slog.Warn("Retry-After in the past", "status", resp.Status, "past_by", now.Sub(retryAfter))
+		} else {
+			c.notBeforeLock.Lock()
+			if retryAfter.After(c.notBefore) {
+				slog.Warn("ceasing DoH sends", "status", resp.Status, "delay", retryAfter.Sub(now))
+				c.notBefore = retryAfter
+			}
+			c.notBeforeLock.Unlock()
+		}
+	}
+
+	return nil
+}
+
+func (c *HTTPPacketConn) sendLoop() {
+	for p := range c.QueuePacketConn.OutgoingQueue(turbotunnel.DummyAddr{}) {
+		c.notBeforeLock.RLock()
+		notBefore := c.notBefore
+		c.notBeforeLock.RUnlock()
+		if wait := notBefore.Sub(time.Now()); wait > 0 {
+			continue
+		}
+
+		if err := c.send(p); err != nil {
+			slog.Warn("HTTP sendLoop", "error", err)
+		}
+	}
+}
+
+func parseRetryAfter(value string, now time.Time) (time.Time, error) {
+	if t, err := http.ParseTime(value); err == nil {
+		return t, nil
+	}
+	i, err := strconv.ParseUint(value, 10, 32)
+	if err != nil {
+		return time.Time{}, err
+	}
+	return now.Add(time.Duration(i) * time.Second), nil
+}
+
+type TLSPacketConn struct {
+	*turbotunnel.QueuePacketConn
+}
+
+func NewTLSPacketConn(addr string, dialTLSContext func(ctx context.Context, network, addr string) (net.Conn, error)) (*TLSPacketConn, error) {
+	dial := func() (net.Conn, error) {
+		ctx, cancel := context.WithTimeout(context.Background(), dialTimeout)
+		defer cancel()
+		return dialTLSContext(ctx, "tcp", addr)
+	}
+
+	conn, err := dial()
+	if err != nil {
+		return nil, err
+	}
+	c := &TLSPacketConn{QueuePacketConn: turbotunnel.NewQueuePacketConn(turbotunnel.DummyAddr{}, 0)}
+	go func() {
+		defer c.Close()
+		for {
+			var wg sync.WaitGroup
+			wg.Add(2)
+			go func() {
+				if err := c.recvLoop(conn); err != nil {
+					slog.Warn("DoT recvLoop", "error", err)
+				}
+				wg.Done()
+			}()
+			go func() {
+				if err := c.sendLoop(conn); err != nil {
+					slog.Warn("DoT sendLoop", "error", err)
+				}
+				wg.Done()
+			}()
+			wg.Wait()
+			conn.Close()
+
+			conn, err = dial()
+			if err != nil {
+				slog.Warn("DoT dial", "error", err)
+				break
+			}
+		}
+	}()
+	return c, nil
+}
+
+func (c *TLSPacketConn) recvLoop(conn net.Conn) error {
+	br := bufio.NewReader(conn)
+	for {
+		var length uint16
+		if err := binary.Read(br, binary.BigEndian, &length); err != nil {
+			if errors.Is(err, io.EOF) {
+				return nil
+			}
+			return err
+		}
+		p := make([]byte, int(length))
+		if _, err := io.ReadFull(br, p); err != nil {
+			return err
+		}
+		c.QueuePacketConn.QueueIncoming(p, turbotunnel.DummyAddr{})
+	}
+}
+
+func (c *TLSPacketConn) sendLoop(conn net.Conn) error {
+	bw := bufio.NewWriter(conn)
+	for p := range c.QueuePacketConn.OutgoingQueue(turbotunnel.DummyAddr{}) {
+		length := uint16(len(p))
+		if int(length) != len(p) {
+			return fmt.Errorf("dns message too large: %d", len(p))
+		}
+		if err := binary.Write(bw, binary.BigEndian, &length); err != nil {
+			return err
+		}
+		if _, err := bw.Write(p); err != nil {
+			return err
+		}
+		if err := bw.Flush(); err != nil {
+			return err
+		}
+	}
+	return nil
 }
