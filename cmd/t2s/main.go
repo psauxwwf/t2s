@@ -1,10 +1,15 @@
 package main
 
 import (
-	"flag"
+	"context"
+	"errors"
 	"fmt"
 	"os"
 	"time"
+
+	"charm.land/lipgloss/v2"
+	"github.com/charmbracelet/fang"
+	"github.com/spf13/cobra"
 
 	"t2s/internal/config"
 	"t2s/internal/dns"
@@ -19,30 +24,174 @@ const (
 	fatalCode
 )
 
-var (
-	path    = flag.String("config", "", "path to config")
-	timeout = flag.Int("timeout", 0, "timeout before exit")
-	repair  = flag.Bool("repair", false, "repair dns error")
-	save    = flag.Bool("save", false, "save default config and exit")
-)
+var infoStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("10"))
+
+type exitError struct {
+	code int
+	err  error
+}
+
+func (e *exitError) Error() string {
+	if e == nil || e.err == nil {
+		return ""
+	}
+	return e.err.Error()
+}
+
+func (e *exitError) Unwrap() error {
+	if e == nil {
+		return nil
+	}
+	return e.err
+}
+
+func newExitError(code int, err error) error {
+	if err == nil {
+		return nil
+	}
+	return &exitError{code: code, err: err}
+}
 
 func main() {
-	flag.Parse()
-	if *save {
-		if err := config.Default(*path); err != nil {
-			fmt.Println(err)
-			os.Exit(defaultCode)
+	if err := fang.Execute(context.Background(), rootCmd()); err != nil {
+		if err, ok := errors.AsType[*exitError](err); ok {
+			os.Exit(err.code)
 		}
-		return
+		os.Exit(fatalCode)
+	}
+}
+
+func rootCmd() *cobra.Command {
+	var (
+		path    string
+		timeout int
+	)
+
+	runE := func(_ *cobra.Command, _ []string) error {
+		return run(path, timeout, false)
 	}
 
-	_config, err := config.New(*path)
+	root := &cobra.Command{
+		Use:   "t2s",
+		Short: "Route system traffic through proxy tunnel",
+		Long: `t2s creates a local tun interface, starts a tun2socks relay, and routes
+default traffic through a selected proxy backend.
+
+Supported backends:
+  - socks (socks5 / shadowsocks / gost relay)
+  - ssh
+  - chisel
+  - dnstt
+  - tor (via local socks endpoint)
+
+DNS features:
+  - local DNS listener
+  - resolver rules (domain-based routing)
+  - custom static records
+  - systemd-resolved integration / recovery
+
+Command model:
+  - run    start tunnel and routing (default when no subcommand)
+  - save   write default config file and exit
+  - repair repair resolver state (/etc/resolv.conf + resolvectl)
+
+Privileges:
+  - run/repair require root (superuser)
+
+Global flags:
+  --config <path>   path to config yaml
+  --timeout <sec>   stop after timeout seconds (0 = no timeout)
+
+Default config path:
+  ~/.config/t2s/config.yaml
+
+Modes and specifics:
+  - socks (socks5): routes traffic through a standard socks5 endpoint.
+  - socks (ss): shadowsocks mode (set socks.proto=ss).
+  - socks (relay): gost relay mode (set socks.proto=relay).
+  - ssh: creates local socks tunnel over SSH and routes via tun interface.
+  - ssh + cloudflared: use ssh args + custom_routes + startup sleep.
+  - chisel: uses chisel socks backend (TLS/web-friendly transport).
+  - chisel via proxy: set chisel.proxy and exclude proxy host from tun route.
+  - dnstt: DNS-tunnel backend, requires resolver/pubkey/domain.
+  - tor: use local tor socks port; exclude tor bridge/public IPs to avoid loops.
+
+Operational notes:
+  - run/repair require superuser privileges.
+  - when running over SSH, add current SSH peer IP to interface.exclude.
+  - use resolver rules + custom records for DNS leak control.
+`,
+		Example: `  # Generate default config
+  t2s save --config /etc/t2s/config.yaml
+
+  # Start tunnel (same as: t2s run)
+  t2s --config /etc/t2s/config.yaml
+
+  # Start and auto-exit after 10 minutes
+  t2s run --config /etc/t2s/config.yaml --timeout 600
+
+  # Repair DNS/resolver state
+  t2s repair --config /etc/t2s/config.yaml
+
+  # See detailed config variants in README.md`,
+		RunE: runE,
+	}
+
+	root.PersistentFlags().StringVar(&path, "config", "", "path to config")
+	root.PersistentFlags().IntVar(&timeout, "timeout", 0, "timeout before exit")
+
+	root.AddCommand(&cobra.Command{
+		Use:   "run",
+		Short: "Start tunnel routing",
+		Long: `Run initializes DNS manager, starts the selected proxy backend,
+configures routes, then switches default route to the tun device.
+
+This is the default action when t2s is called without a subcommand.`,
+		Example: `  t2s run --config /etc/t2s/config.yaml
+  t2s --config /etc/t2s/config.yaml
+  t2s run --config /etc/t2s/config.yaml --timeout 300`,
+		RunE: runE,
+	})
+
+	root.AddCommand(&cobra.Command{
+		Use:   "repair",
+		Short: "Repair DNS resolver state",
+		Long: `Repair fixes resolver state used by systemd-resolved and is helpful
+when /etc/resolv.conf symlink or interface DNS state is broken.`,
+		Example: `  t2s repair
+  t2s repair --config /etc/t2s/config.yaml`,
+		RunE: func(_ *cobra.Command, _ []string) error {
+			return run(path, timeout, true)
+		},
+	})
+
+	root.AddCommand(&cobra.Command{
+		Use:   "save",
+		Short: "Write default config and exit",
+		Long: `Save writes a full default config template.
+If --config is omitted, default path is ~/.config/t2s/config.yaml.`,
+		Example: `  t2s save
+  t2s save --config /etc/t2s/config.yaml`,
+		RunE: func(_ *cobra.Command, _ []string) error {
+			if err := config.Default(path); err != nil {
+				return newExitError(defaultCode, err)
+			}
+			return nil
+		},
+	})
+
+	return root
+}
+
+func run(path string, timeout int, repair bool) error {
+	if os.Geteuid() != 0 {
+		return newExitError(fatalCode, errors.New("this must be superuser"))
+	}
+
+	_config, err := config.New(path)
 	if err != nil {
-		fmt.Println("config parse error:", err)
-		os.Exit(configCode)
+		return newExitError(configCode, fmt.Errorf("config parse error: %w", err))
 	}
-
-	fmt.Println("local relay port:", _config.RelayPort)
 
 	_dns, err := dns.New(
 		_config.Dns.Listen,
@@ -53,31 +202,29 @@ func main() {
 		_config.Dns.Records,
 	)
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(initCode)
-	}
-	if *repair {
-		if err := _dns.Repair(); err != nil {
-			fmt.Println(err)
-			os.Exit(fatalCode)
-		}
-		return
+		return newExitError(initCode, err)
 	}
 
-	_t2s, err := t2s.New(
-		_config,
-		_dns,
-	)
+	if repair {
+		if err := _dns.Repair(); err != nil {
+			return newExitError(fatalCode, err)
+		}
+		return nil
+	}
+
+	fmt.Println(infoStyle.Render(fmt.Sprintf("local relay port: %d", _config.RelayPort)))
+
+	_t2s, err := t2s.New(_config, _dns)
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(initCode)
+		return newExitError(initCode, err)
 	}
 
 	if err := _t2s.Run(
 		make(chan os.Signal, 1),
-		time.Duration(*timeout)*time.Second,
+		time.Duration(timeout)*time.Second,
 	); err != nil {
-		fmt.Println(err)
-		os.Exit(fatalCode)
+		return newExitError(fatalCode, err)
 	}
+
+	return nil
 }

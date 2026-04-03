@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"sync"
 	"time"
@@ -156,17 +155,17 @@ func (d *dnsttclient) run() error {
 	if mtu < 80 {
 		return fmt.Errorf("domain %s leaves only %d bytes for payload", d.domain, mtu)
 	}
-	log.Printf("effective MTU %d", mtu)
+	fmt.Printf("effective MTU %d\n", mtu)
 
 	conn, err := kcp.NewConn2(d.remote, nil, 0, 0, d.pconn)
 	if err != nil {
 		return fmt.Errorf("opening KCP conn: %v", err)
 	}
 	defer func() {
-		log.Printf("end session %08x", conn.GetConv())
+		fmt.Printf("end session %08x\n", conn.GetConv())
 		conn.Close()
 	}()
-	log.Printf("begin session %08x", conn.GetConv())
+	fmt.Printf("begin session %08x\n", conn.GetConv())
 
 	conn.SetStreamMode(true)
 
@@ -208,7 +207,7 @@ func (d *dnsttclient) run() error {
 			defer local.Close()
 			err := handle(local.(*net.TCPConn), sess, conn.GetConv())
 			if err != nil {
-				log.Printf("handle: %v", err)
+				fmt.Printf("handle: %v\n", err)
 			}
 		}()
 	}
@@ -232,10 +231,10 @@ func handle(local *net.TCPConn, sess *smux.Session, conv uint32) error {
 		return fmt.Errorf("session %08x opening stream: %v", conv, err)
 	}
 	defer func() {
-		log.Printf("end stream %08x:%d", conv, stream.ID())
+		fmt.Printf("end stream %08x:%d\n", conv, stream.ID())
 		stream.Close()
 	}()
-	log.Printf("begin stream %08x:%d", conv, stream.ID())
+	fmt.Printf("begin stream %08x:%d\n", conv, stream.ID())
 
 	var wg sync.WaitGroup
 	wg.Add(2)
@@ -247,7 +246,7 @@ func handle(local *net.TCPConn, sess *smux.Session, conv uint32) error {
 			err = nil
 		}
 		if err != nil && !errors.Is(err, io.ErrClosedPipe) {
-			log.Printf("stream %08x:%d copy stream←local: %v", conv, stream.ID(), err)
+			fmt.Printf("stream %08x:%d copy stream←local: %v\n", conv, stream.ID(), err)
 		}
 		local.CloseRead()
 		stream.Close()
@@ -260,7 +259,7 @@ func handle(local *net.TCPConn, sess *smux.Session, conv uint32) error {
 			err = nil
 		}
 		if err != nil && !errors.Is(err, io.ErrClosedPipe) {
-			log.Printf("stream %08x:%d copy local←stream: %v", conv, stream.ID(), err)
+			fmt.Printf("stream %08x:%d copy local←stream: %v\n", conv, stream.ID(), err)
 		}
 		local.CloseWrite()
 	}()
@@ -287,13 +286,13 @@ func NewDNSPacketConn(transport net.PacketConn, addr net.Addr, domain dns.Name) 
 	go func() {
 		err := c.recvLoop(transport)
 		if err != nil {
-			log.Printf("recvLoop: %v", err)
+			fmt.Printf("recvLoop: %v\n", err)
 		}
 	}()
 	go func() {
 		err := c.sendLoop(transport, addr)
 		if err != nil {
-			log.Printf("sendLoop: %v", err)
+			fmt.Printf("sendLoop: %v\n", err)
 		}
 	}()
 	return c
@@ -355,7 +354,7 @@ func (c *DNSPacketConn) recvLoop(transport net.PacketConn) error {
 		n, addr, err := transport.ReadFrom(buf[:])
 		if err != nil {
 			if err, ok := err.(net.Error); ok && err.Temporary() {
-				log.Printf("ReadFrom temporary error: %v", err)
+				fmt.Printf("ReadFrom temporary error: %v\n", err)
 				continue
 			}
 			return err
@@ -363,7 +362,7 @@ func (c *DNSPacketConn) recvLoop(transport net.PacketConn) error {
 
 		resp, err := dns.MessageFromWireFormat(buf[:n])
 		if err != nil {
-			log.Printf("MessageFromWireFormat: %v", err)
+			fmt.Printf("MessageFromWireFormat: %v\n", err)
 			continue
 		}
 
@@ -506,7 +505,7 @@ func (c *DNSPacketConn) sendLoop(transport net.PacketConn, addr net.Addr) error 
 
 		err := c.send(transport, p, addr)
 		if err != nil {
-			log.Printf("send: %v", err)
+			fmt.Printf("send: %v\n", err)
 			continue
 		}
 	}

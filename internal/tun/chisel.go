@@ -39,7 +39,7 @@ func Chisel(_config *config.Config) (Tunnable, error) {
 			_config.Interface.Device,
 			config.ProtoSocks,
 			"", "", "127.0.0.1", "",
-			1080,
+			_config.RelayPort,
 		),
 	), nil
 }
@@ -83,7 +83,7 @@ func getChisel(server, username, password, proxy string, relayport int) (*client
 		TLS: client.TLSConfig{
 			SkipVerify: true,
 		},
-		Remotes: []string{"socks", fmt.Sprint(relayport)},
+		Remotes: []string{fmt.Sprintf("127.0.0.1:%d:socks", relayport)},
 	}
 	_client, err := client.NewClient(&config)
 	if err != nil {
