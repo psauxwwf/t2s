@@ -204,11 +204,9 @@ proxy:
   type: dnstt
 ---
 dnstt:
-  resolver: udp://1.1.1.1:53
-  # examples:
-  # udp://8.8.8.8:53
-  # dot://8.8.8.8:853
-  # https://dns.google/dns-query
+  resolver: udp://8.8.8.8:53
+  # resolver: dot://8.8.8.8:853
+  # resolver: https://dns.google/dns-query
   pubkey: "7c25844f2536a3d82b9a7a4c052f119f34ec97919bf9574679897d08f241ca48"
   domain: "t.domain.xyz"
 ```
