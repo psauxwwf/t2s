@@ -69,11 +69,10 @@ type Socks struct {
 }
 
 type Ssh struct {
-	Username  string   `yaml:"username"`
-	Host      string   `yaml:"host"`
-	Port      int      `yaml:"port"`
-	Args      []string `yaml:"args"`
-	LocalPort int      `yaml:"-"`
+	Username string   `yaml:"username"`
+	Host     string   `yaml:"host"`
+	Port     int      `yaml:"port"`
+	Args     []string `yaml:"args"`
 }
 
 type Chisel struct {
@@ -118,6 +117,8 @@ type Config struct {
 	Chisel    Chisel    `yaml:"chisel"`
 	Dnstt     Dnstt     `yaml:"dnstt"`
 	Dns       Dns       `yaml:"dns"`
+
+	RelayPort int `yaml:"-"`
 }
 
 var _default = Config{
@@ -206,6 +207,10 @@ func Default(path string) error {
 }
 
 func New(filename string) (*Config, error) {
+	var (
+		_config Config
+	)
+
 	if filename == "" {
 		_path, err := defaultPath()
 		if err != nil {
@@ -216,10 +221,9 @@ func New(filename string) (*Config, error) {
 
 	port, err := net.RandomPort()
 	if err != nil {
-		port = 31888
+		return nil, err
 	}
-	_config := _default
-	_config.Ssh.LocalPort = port
+	_config.RelayPort = port
 
 	data, err := os.ReadFile(filename)
 	if err != nil {
