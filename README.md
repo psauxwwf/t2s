@@ -182,20 +182,26 @@ chisel:
   proxy: ""
 ```
 
-### Proxy to [DNSTT](https://github.com/bugfloyd/dnstt-deploy)
+### Proxy to DNSTT
 
 #### Install server
 
 ```bash
+docker compose -f docker-compose.dnstt.yaml up -d
+```
+
+#### Install server without docker
+
+```bash
 ssh-keygen -t rsa -N "" -f /root/.ssh/id_rsa
 cat /root/.ssh/id_rsa.pub >> /root/.ssh/authorized_keys
-ssh -N -D 127.0.0.1:8000 root@127.0.0.1 -f
+ssh -N -D 127.0.0.1:1080 root@127.0.0.1 -f
 
 wget https://dnstt.network/dnstt-server-linux-amd64
 chmod +x dnstt-server-linux-amd64
 
 ./dnstt-server-linux-amd64 -gen-key -privkey-file server.key -pubkey-file server.pub
-./dnstt-server-linux-amd64 -udp :53 -privkey-file server.key t.domain.xyz 127.0.0.1:8000
+./dnstt-server-linux-amd64 -udp :53 -privkey-file server.key t.domain.xyz 127.0.0.1:1080
 cat server.pub
 ```
 
@@ -204,11 +210,9 @@ proxy:
   type: dnstt
 ---
 dnstt:
-  resolver: udp://1.1.1.1:53
-  # examples:
-  # udp://8.8.8.8:53
-  # dot://8.8.8.8:853
-  # https://dns.google/dns-query
+  resolver: udp://8.8.8.8:53
+  # resolver: dot://8.8.8.8:853
+  # resolver: https://dns.google/dns-query
   pubkey: "7c25844f2536a3d82b9a7a4c052f119f34ec97919bf9574679897d08f241ca48"
   domain: "t.domain.xyz"
 ```
@@ -369,4 +373,11 @@ sudo systemctl restart systemd-resolved
 
 ---
 
-- https://github.com/xjasonlyu/tun2socks/wiki/Proxy-Models
+- [Proxy models for tun2socks](https://github.com/xjasonlyu/tun2socks/wiki/Proxy-Models)
+- DNSTT
+  - [dnstt classic](https://dnstt.network/)
+    - [deploy](https://github.com/bugfloyd/dnstt-deploy)
+  - [slipstream](https://github.com/Mygod/slipstream-rust) - another dns server/client
+    - [deploy](https://github.com/dnstt-xyz/slipstream-socks-deploy)
+  - [dnstt android app](https://github.com/dnstt-xyz/dnstt_xyz_app)
+  - [public DNS list](https://dnstt.xyz/servers/dns/ru.json)

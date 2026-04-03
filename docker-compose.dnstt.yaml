@@ -14,5 +14,5 @@ services:
       - NS_QUERY=${NS_QUERY}
       - DNS_PORT=${DNS_PORT:-:53}
       - UPSTREAM=${UPSTREAM:-127.0.0.1:1080}
-      - MTU=${MTU:-1400}
+      - MTU=${MTU:-1232}
     network_mode: "host"
