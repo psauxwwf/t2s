@@ -14,6 +14,7 @@ import (
 type chisel struct {
 	server, username, password, proxy string
 	ip                                string
+	relayport                         int
 	*Tun
 }
 
@@ -24,6 +25,7 @@ func wrapChisel(
 	return &chisel{
 		config.Chisel.Server, config.Chisel.Username, config.Chisel.Password, config.Chisel.Proxy,
 		config.Chisel.IP,
+		config.RelayPort,
 		tun,
 	}
 }
@@ -50,6 +52,7 @@ func (c *chisel) Run() chan error {
 		c.username,
 		c.password,
 		c.proxy,
+		c.relayport,
 	)
 	if err != nil {
 		errch <- err
@@ -69,7 +72,7 @@ func (c *chisel) Run() chan error {
 	return errch
 }
 
-func getChisel(server, username, password, proxy string) (*client.Client, error) {
+func getChisel(server, username, password, proxy string, relayport int) (*client.Client, error) {
 	config := client.Config{
 		Server:        server,
 		Auth:          fmt.Sprintf("%s:%s", username, password),
@@ -80,7 +83,7 @@ func getChisel(server, username, password, proxy string) (*client.Client, error)
 		TLS: client.TLSConfig{
 			SkipVerify: true,
 		},
-		Remotes: []string{"socks"},
+		Remotes: []string{"socks", fmt.Sprint(relayport)},
 	}
 	_client, err := client.NewClient(&config)
 	if err != nil {

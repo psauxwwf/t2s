@@ -56,7 +56,7 @@ func wrapDnstt(
 	tun *Tun,
 ) *dnstt {
 	return &dnstt{
-		config.Dnstt.Resolver, config.Dnstt.Pubkey, config.Dnstt.Domain, "127.0.0.1:1080",
+		config.Dnstt.Resolver, config.Dnstt.Pubkey, config.Dnstt.Domain, net.JoinHostPort("127.0.0.1", fmt.Sprint(config.RelayPort)),
 		config.Dnstt.IP,
 		tun,
 	}
@@ -69,7 +69,7 @@ func Dnstt(_config *config.Config) (Tunnable, error) {
 			_config.Interface.Device,
 			config.ProtoSocks,
 			_config.Dnstt.Username, _config.Dnstt.Password, "127.0.0.1", "",
-			1080,
+			_config.RelayPort,
 		),
 	), nil
 }
