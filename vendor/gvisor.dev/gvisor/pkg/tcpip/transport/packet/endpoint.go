@@ -26,10 +26,10 @@ package packet
 
 import (
 	"io"
+	"math"
 	"time"
 
 	"gvisor.dev/gvisor/pkg/buffer"
-	"gvisor.dev/gvisor/pkg/sync"
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
@@ -63,8 +63,9 @@ type packet struct {
 //
 // Lock order:
 //
-//	endpoint.mu
-//	  endpoint.rcvMu
+//		endpoint.mu
+//		  endpoint.rcvMu
+//	    endpoint.packetMmapMu
 //
 // +stateify savable
 type endpoint struct {
@@ -79,7 +80,7 @@ type endpoint struct {
 	stats       tcpip.TransportEndpointStats
 
 	// The following fields are used to manage the receive queue.
-	rcvMu sync.Mutex `state:"nosave"`
+	rcvMu rcvMutex `state:"nosave"`
 	// +checklocks:rcvMu
 	rcvList packetList
 	// +checklocks:rcvMu
@@ -89,7 +90,7 @@ type endpoint struct {
 	// +checklocks:rcvMu
 	rcvDisabled bool
 
-	mu sync.RWMutex `state:"nosave"`
+	mu endpointRWMutex `state:"nosave"`
 	// +checklocks:mu
 	closed bool
 	// +checklocks:mu
@@ -97,15 +98,16 @@ type endpoint struct {
 	// +checklocks:mu
 	boundNIC tcpip.NICID
 
-	lastErrorMu sync.Mutex `state:"nosave"`
+	lastErrorMu lastErrorMutex `state:"nosave"`
 	// +checklocks:lastErrorMu
 	lastError tcpip.Error
 
-	// +checklocks:mu
+	packetMmapMu packetMmapRWMutex `state:"nosave"`
+	// +checklocks:packetMmapMu
 	packetMMapVersion tpacketVersion
-	// +checklocks:mu
+	// +checklocks:packetMmapMu
 	packetMMapReserve int
-	// +checklocks:mu
+	// +checklocks:packetMmapMu
 	packetMMapEp stack.PacketMMapEndpoint
 }
 
@@ -145,17 +147,17 @@ func (ep *endpoint) Abort() {
 func (ep *endpoint) Close() {
 	ep.mu.Lock()
 	defer ep.mu.Unlock()
-
 	if ep.closed {
 		return
 	}
-
 	ep.stack.UnregisterPacketEndpoint(ep.boundNIC, ep.boundNetProto, ep)
 
+	ep.packetMmapMu.Lock()
 	if ep.packetMMapEp != nil {
 		ep.packetMMapEp.Close()
 		ep.packetMMapEp = nil
 	}
+	ep.packetMmapMu.Unlock()
 
 	ep.rcvMu.Lock()
 	defer ep.rcvMu.Unlock()
@@ -369,11 +371,11 @@ func (ep *endpoint) Readiness(mask waiter.EventMask) waiter.EventMask {
 
 	// Determine whether the endpoint is readable.
 	if (mask & waiter.ReadableEvents) != 0 {
-		ep.mu.RLock()
+		ep.packetMmapMu.RLock()
 		if ep.packetMMapEp != nil {
 			result |= ep.packetMMapEp.Readiness(mask)
 		}
-		ep.mu.RUnlock()
+		ep.packetMmapMu.RUnlock()
 		ep.rcvMu.Lock()
 		if !ep.rcvList.Empty() || ep.rcvClosed {
 			result |= waiter.ReadableEvents
@@ -404,10 +406,10 @@ func (ep *endpoint) SetSockOpt(opt tcpip.SettableSocketOption) tcpip.Error {
 
 // SetSockOptInt implements tcpip.Endpoint.SetSockOptInt.
 func (ep *endpoint) SetSockOptInt(opt tcpip.SockOptInt, v int) tcpip.Error {
-	ep.mu.Lock()
-	defer ep.mu.Unlock()
 	switch opt {
 	case tcpip.PacketMMapVersionOption:
+		ep.packetMmapMu.Lock()
+		defer ep.packetMmapMu.Unlock()
 		// We support up to TPACKET_V2.
 		version := tpacketVersion(v)
 		switch version {
@@ -421,8 +423,13 @@ func (ep *endpoint) SetSockOptInt(opt tcpip.SockOptInt, v int) tcpip.Error {
 			return &tcpip.ErrInvalidOptionValue{}
 		}
 	case tcpip.PacketMMapReserveOption:
+		ep.packetMmapMu.Lock()
+		defer ep.packetMmapMu.Unlock()
 		if ep.packetMMapEp != nil {
 			return &tcpip.ErrEndpointBusy{}
+		}
+		if uint32(v) > uint32(math.MaxInt32) {
+			return &tcpip.ErrInvalidOptionValue{}
 		}
 		ep.packetMMapReserve = v
 		return nil
@@ -449,10 +456,10 @@ func (ep *endpoint) UpdateLastError(err tcpip.Error) {
 
 // GetSockOpt implements tcpip.Endpoint.GetSockOpt.
 func (ep *endpoint) GetSockOpt(opt tcpip.GettableSocketOption) tcpip.Error {
-	ep.mu.RLock()
-	defer ep.mu.RUnlock()
 	switch opt.(type) {
 	case *tcpip.TpacketStats:
+		ep.packetMmapMu.RLock()
+		defer ep.packetMmapMu.RUnlock()
 		if ep.packetMMapEp == nil {
 			return nil
 		}
@@ -483,12 +490,15 @@ func (ep *endpoint) GetSockOptInt(opt tcpip.SockOptInt) (int, tcpip.Error) {
 
 // handlePacket implements stack.PacketEndpoint.HandlePacket
 func (ep *endpoint) HandlePacket(nicID tcpip.NICID, netProto tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) {
-	ep.mu.RLock()
-	defer ep.mu.RUnlock()
+	ep.packetMmapMu.RLock()
 	if ep.packetMMapEp != nil {
-		ep.packetMMapEp.HandlePacket(nicID, netProto, pkt)
-		return
+		if handled := ep.packetMMapEp.HandlePacket(nicID, netProto, pkt); handled {
+			ep.packetMmapMu.RUnlock()
+			return
+		}
 	}
+	ep.packetMmapMu.RUnlock()
+
 	wasEmpty := ep.handlePacketInner(nicID, netProto, pkt)
 
 	ep.stats.PacketsReceived.Increment()
@@ -581,16 +591,15 @@ func (ep *endpoint) SocketOptions() *tcpip.SocketOptions {
 
 // GetPacketMMapOpts implements stack.MappablePacketEndpoint.GetPacketMMapOpts.
 func (ep *endpoint) GetPacketMMapOpts(req *tcpip.TpacketReq, isRx bool) stack.PacketMMapOpts {
-	ep.mu.Lock()
-	defer ep.mu.Unlock()
+	ep.packetMmapMu.Lock()
+	defer ep.packetMmapMu.Unlock()
+
 	return stack.PacketMMapOpts{
 		Req:            req,
 		IsRx:           isRx,
 		Cooked:         ep.cooked,
 		Stack:          ep.stack,
 		Wq:             ep.waiterQueue,
-		NICID:          ep.boundNIC,
-		NetProto:       ep.boundNetProto,
 		PacketEndpoint: ep,
 		Version:        int(ep.packetMMapVersion),
 		Reserve:        uint32(ep.packetMMapReserve),
@@ -600,15 +609,15 @@ func (ep *endpoint) GetPacketMMapOpts(req *tcpip.TpacketReq, isRx bool) stack.Pa
 // SetPacketMMapEndpoint implements
 // stack.MappablePacketEndpoint.SetPacketMMapEndpoint.
 func (ep *endpoint) SetPacketMMapEndpoint(m stack.PacketMMapEndpoint) {
-	ep.mu.Lock()
-	defer ep.mu.Unlock()
+	ep.packetMmapMu.Lock()
+	defer ep.packetMmapMu.Unlock()
 	ep.packetMMapEp = m
 }
 
 // GetPacketMMapEndpoint implements
 // stack.MappablePacketEndpoint.GetPacketMMapEndpoint.
 func (ep *endpoint) GetPacketMMapEndpoint() stack.PacketMMapEndpoint {
-	ep.mu.RLock()
-	defer ep.mu.RUnlock()
+	ep.packetMmapMu.RLock()
+	defer ep.packetMmapMu.RUnlock()
 	return ep.packetMMapEp
 }
