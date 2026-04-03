@@ -4,10 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"time"
 
-	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/fang"
 	"github.com/spf13/cobra"
 
@@ -23,8 +23,6 @@ const (
 	initCode
 	fatalCode
 )
-
-var infoStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("10"))
 
 type exitError struct {
 	code int
@@ -65,6 +63,7 @@ func rootCmd() *cobra.Command {
 	var (
 		path    string
 		timeout int
+		level   string
 	)
 
 	runE := func(_ *cobra.Command, _ []string) error {
@@ -135,10 +134,39 @@ Operational notes:
 
   # See detailed config variants in README.md`,
 		RunE: runE,
+		PersistentPreRunE: func(_ *cobra.Command, _ []string) error {
+			var parsedLevel slog.Level
+			if err := parsedLevel.UnmarshalText([]byte(level)); err != nil {
+				fmt.Fprintf(os.Stderr, "invalid log level %q: %v\n", level, err)
+				return newExitError(2, err)
+			}
+
+			logFile, err := os.OpenFile("t2s.json", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "failed to open log file: %v\n", err)
+				return newExitError(fatalCode, err)
+			}
+
+			log := slog.New(
+				slog.NewMultiHandler(
+					slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
+						AddSource: true,
+						Level:     parsedLevel,
+					}),
+					slog.NewJSONHandler(logFile, &slog.HandlerOptions{
+						AddSource: true,
+						Level:     parsedLevel,
+					}),
+				),
+			)
+			slog.SetDefault(log)
+			return nil
+		},
 	}
 
 	root.PersistentFlags().StringVar(&path, "config", "", "path to config")
 	root.PersistentFlags().IntVar(&timeout, "timeout", 0, "timeout before exit")
+	root.PersistentFlags().StringVar(&level, "level", "info", "log level (debug, info, warn, error)")
 
 	root.AddCommand(&cobra.Command{
 		Use:   "run",
@@ -209,10 +237,11 @@ func run(path string, timeout int, repair bool) error {
 		if err := _dns.Repair(); err != nil {
 			return newExitError(fatalCode, err)
 		}
+		slog.Info("dns repair complete")
 		return nil
 	}
 
-	fmt.Println(infoStyle.Render(fmt.Sprintf("local relay port: %d", _config.RelayPort)))
+	slog.Info("local relay port", "port", _config.RelayPort)
 
 	_t2s, err := t2s.New(_config, _dns)
 	if err != nil {

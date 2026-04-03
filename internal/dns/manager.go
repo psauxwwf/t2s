@@ -3,6 +3,7 @@ package dns
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -46,7 +47,7 @@ func Manager(
 		_manager.currentconf = currentconf
 		link, err := fs.CheckSymlink(respath)
 		if err != nil {
-			fmt.Println("chech symlink:", err)
+			slog.Warn("check symlink", "error", err)
 		}
 		_manager.link = link
 	}
@@ -146,7 +147,7 @@ func render(path, format, a string) error {
 func (m *manager) getInterfaces() (interfaces []string) {
 	out, err := shell.New("resolvectl", "dns").Run()
 	if err != nil {
-		fmt.Printf("failed to get interfaces: %v\n", err)
+		slog.Warn("failed to get interfaces", "error", err)
 		return
 	}
 	for _, match := range reInterfaces.FindAllStringSubmatch(out, -1) {

@@ -2,6 +2,7 @@ package shell
 
 import (
 	"fmt"
+	"log/slog"
 	"os/exec"
 	"strings"
 )
@@ -23,7 +24,7 @@ func (c *Command) String() string {
 }
 
 func (c *Command) Log() {
-	fmt.Println(c)
+	slog.Debug("exec", "cmd", c.String())
 }
 
 func (c *Command) WithEnv(env []string) *Command {
