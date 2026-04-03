@@ -2,7 +2,6 @@ package t2s
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"os/signal"
 	"strings"
@@ -72,7 +71,7 @@ func (t *Tun2socksme) Run(sigch chan os.Signal, timeout time.Duration) error {
 
 	defer func() {
 		if err := t.Shutdown(); err != nil {
-			log.Println(err)
+			fmt.Println(err)
 		}
 	}()
 
@@ -110,7 +109,7 @@ func (t *Tun2socksme) Run(sigch chan os.Signal, timeout time.Duration) error {
 
 func (t *Tun2socksme) Prepare() error {
 	if err := t.disableRP(); err != nil {
-		log.Printf("rp error: %v", err)
+		fmt.Printf("rp error: %v\n", err)
 	}
 	if err := t.addRoutes(); err != nil {
 		return fmt.Errorf("route error: %w", err)

@@ -2,7 +2,6 @@ package dns
 
 // import (
 // 	"fmt"
-// 	"log"
 // 	"regexp"
 // )
 
@@ -35,10 +34,10 @@ package dns
 // 	for i, resolv := range resolvers {
 // 		server, err := parse(resolv)
 // 		if i == 0 && server.proto != "tcp" {
-// 			log.Fatalln("first resolver must be with proto \"tcp\" not:", server.proto)
+// 			fmt.Println("first resolver must be with proto \"tcp\" not:", server.proto)
 // 		}
 // 		if err != nil {
-// 			log.Println(err)
+// 			fmt.Println(err)
 // 			continue
 // 		}
 // 		servers = append(servers, server)
