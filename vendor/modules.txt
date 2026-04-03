@@ -8,35 +8,6 @@ github.com/ajg/form
 # github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5
 ## explicit
 github.com/armon/go-socks5
-# github.com/devil666face/tun2socks v0.0.0-20250301224203-b3709862bf07
-## explicit; go 1.23.1
-github.com/devil666face/tun2socks/buffer
-github.com/devil666face/tun2socks/buffer/allocator
-github.com/devil666face/tun2socks/core
-github.com/devil666face/tun2socks/core/adapter
-github.com/devil666face/tun2socks/core/device
-github.com/devil666face/tun2socks/core/device/fdbased
-github.com/devil666face/tun2socks/core/device/iobased
-github.com/devil666face/tun2socks/core/device/tun
-github.com/devil666face/tun2socks/core/option
-github.com/devil666face/tun2socks/dialer
-github.com/devil666face/tun2socks/engine
-github.com/devil666face/tun2socks/internal/pool
-github.com/devil666face/tun2socks/internal/version
-github.com/devil666face/tun2socks/log
-github.com/devil666face/tun2socks/metadata
-github.com/devil666face/tun2socks/proxy
-github.com/devil666face/tun2socks/proxy/proto
-github.com/devil666face/tun2socks/restapi
-github.com/devil666face/tun2socks/transport/internal/bufferpool
-github.com/devil666face/tun2socks/transport/shadowsocks/core
-github.com/devil666face/tun2socks/transport/shadowsocks/shadowaead
-github.com/devil666face/tun2socks/transport/shadowsocks/shadowstream
-github.com/devil666face/tun2socks/transport/simple-obfs
-github.com/devil666face/tun2socks/transport/socks4
-github.com/devil666face/tun2socks/transport/socks5
-github.com/devil666face/tun2socks/tunnel
-github.com/devil666face/tun2socks/tunnel/statistic
 # github.com/docker/go-units v0.5.0
 ## explicit
 github.com/docker/go-units
@@ -116,6 +87,35 @@ github.com/templexxx/xorsimd
 # github.com/tjfoc/gmsm v1.4.1
 ## explicit; go 1.14
 github.com/tjfoc/gmsm/sm4
+# github.com/xjasonlyu/tun2socks/v2 v2.6.0
+## explicit; go 1.23.1
+github.com/xjasonlyu/tun2socks/v2/buffer
+github.com/xjasonlyu/tun2socks/v2/buffer/allocator
+github.com/xjasonlyu/tun2socks/v2/core
+github.com/xjasonlyu/tun2socks/v2/core/adapter
+github.com/xjasonlyu/tun2socks/v2/core/device
+github.com/xjasonlyu/tun2socks/v2/core/device/fdbased
+github.com/xjasonlyu/tun2socks/v2/core/device/iobased
+github.com/xjasonlyu/tun2socks/v2/core/device/tun
+github.com/xjasonlyu/tun2socks/v2/core/option
+github.com/xjasonlyu/tun2socks/v2/dialer
+github.com/xjasonlyu/tun2socks/v2/engine
+github.com/xjasonlyu/tun2socks/v2/internal/pool
+github.com/xjasonlyu/tun2socks/v2/internal/version
+github.com/xjasonlyu/tun2socks/v2/log
+github.com/xjasonlyu/tun2socks/v2/metadata
+github.com/xjasonlyu/tun2socks/v2/proxy
+github.com/xjasonlyu/tun2socks/v2/proxy/proto
+github.com/xjasonlyu/tun2socks/v2/restapi
+github.com/xjasonlyu/tun2socks/v2/transport/internal/bufferpool
+github.com/xjasonlyu/tun2socks/v2/transport/shadowsocks/core
+github.com/xjasonlyu/tun2socks/v2/transport/shadowsocks/shadowaead
+github.com/xjasonlyu/tun2socks/v2/transport/shadowsocks/shadowstream
+github.com/xjasonlyu/tun2socks/v2/transport/simple-obfs
+github.com/xjasonlyu/tun2socks/v2/transport/socks4
+github.com/xjasonlyu/tun2socks/v2/transport/socks5
+github.com/xjasonlyu/tun2socks/v2/tunnel
+github.com/xjasonlyu/tun2socks/v2/tunnel/statistic
 # github.com/xtaci/kcp-go/v5 v5.6.8
 ## explicit; go 1.21
 github.com/xtaci/kcp-go/v5
@@ -139,7 +139,7 @@ go.uber.org/zap/internal/exit
 go.uber.org/zap/internal/pool
 go.uber.org/zap/internal/stacktrace
 go.uber.org/zap/zapcore
-# golang.org/x/crypto v0.35.0
+# golang.org/x/crypto v0.38.0
 ## explicit; go 1.23.0
 golang.org/x/crypto/blake2b
 golang.org/x/crypto/blake2s
@@ -162,8 +162,8 @@ golang.org/x/crypto/xtea
 # golang.org/x/mod v0.21.0
 ## explicit; go 1.22.0
 golang.org/x/mod/semver
-# golang.org/x/net v0.35.0
-## explicit; go 1.18
+# golang.org/x/net v0.40.0
+## explicit; go 1.23.0
 golang.org/x/net/bpf
 golang.org/x/net/context
 golang.org/x/net/internal/iana
@@ -175,13 +175,13 @@ golang.org/x/net/proxy
 # golang.org/x/sync v0.8.0
 ## explicit; go 1.18
 golang.org/x/sync/errgroup
-# golang.org/x/sys v0.30.0
-## explicit; go 1.18
+# golang.org/x/sys v0.33.0
+## explicit; go 1.23.0
 golang.org/x/sys/cpu
 golang.org/x/sys/unix
 golang.org/x/sys/windows
-# golang.org/x/time v0.10.0
-## explicit; go 1.18
+# golang.org/x/time v0.11.0
+## explicit; go 1.23.0
 golang.org/x/time/rate
 # golang.org/x/tools v0.26.0
 ## explicit; go 1.22.0
@@ -205,8 +205,8 @@ golang.org/x/tools/internal/versions
 # golang.zx2c4.com/wintun v0.0.0-20230126152724-0fa3db229ce2
 ## explicit; go 1.17
 golang.zx2c4.com/wintun
-# golang.zx2c4.com/wireguard v0.0.0-20231211153847-12269c276173
-## explicit; go 1.20
+# golang.zx2c4.com/wireguard v0.0.0-20250521234502-f333402bd9cb
+## explicit; go 1.23.1
 golang.zx2c4.com/wireguard/conn
 golang.zx2c4.com/wireguard/conn/winrio
 golang.zx2c4.com/wireguard/rwcancel
@@ -214,7 +214,7 @@ golang.zx2c4.com/wireguard/tun
 # gopkg.in/yaml.v3 v3.0.1
 ## explicit
 gopkg.in/yaml.v3
-# gvisor.dev/gvisor v0.0.0-20250215002057-313350f3e697
+# gvisor.dev/gvisor v0.0.0-20250523182742-eede7a881b20
 ## explicit; go 1.23.1
 gvisor.dev/gvisor/pkg/abi/linux/errno
 gvisor.dev/gvisor/pkg/atomicbitops
