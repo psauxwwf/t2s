@@ -1,0 +1,56 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: Branch to release from
+        required: true
+        default: main
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build and publish release
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.branch || github.ref_name }}
+
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y make binutils tar gzip unzip curl
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Set up Task
+        uses: arduino/setup-task@v2
+
+      - name: Build project
+        run: task build
+
+      - name: Pack release artifacts
+        run: |
+          tar -czf "./bin/${{ github.event.repository.name }}_linux_amd64.tar.gz" -C ./bin "${{ github.event.repository.name }}"
+
+      - name: Set tag name
+        run: echo "GITHUB_RELEASE_TAG=$(date +v%m.%d.%H)" >> "$GITHUB_ENV"
+
+      - name: Create GitHub release and upload assets
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.GITHUB_RELEASE_TAG }}
+          draft: false
+          prerelease: false
+          files: |
+            ./bin/${{ github.event.repository.name }}_linux_amd64.tar.gz
