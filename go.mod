@@ -1,11 +1,8 @@
 module t2s
 
-go 1.23.1
-
-toolchain go1.23.4
+go 1.26
 
 require (
-	github.com/ilyakaznacheev/cleanenv v1.5.0
 	github.com/jpillora/chisel v1.10.1
 	github.com/miekg/dns v1.1.63
 	github.com/xjasonlyu/tun2socks/v2 v2.6.0
@@ -16,7 +13,6 @@ require (
 )
 
 require (
-	github.com/BurntSushi/toml v1.4.1-0.20240526193622-a339e1f7089c // indirect
 	github.com/ajg/form v1.5.1 // indirect
 	github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
@@ -31,7 +27,6 @@ require (
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/gorilla/schema v1.4.1 // indirect
 	github.com/gorilla/websocket v1.5.3 // indirect
-	github.com/joho/godotenv v1.5.1 // indirect
 	github.com/jpillora/backoff v1.0.0 // indirect
 	github.com/jpillora/sizestr v1.0.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.6 // indirect
@@ -53,5 +48,4 @@ require (
 	golang.zx2c4.com/wintun v0.0.0-20230126152724-0fa3db229ce2 // indirect
 	golang.zx2c4.com/wireguard v0.0.0-20250521234502-f333402bd9cb // indirect
 	gvisor.dev/gvisor v0.0.0-20250523182742-eede7a881b20 // indirect
-	olympos.io/encoding/edn v0.0.0-20201019073823-d3554ca0b0a3 // indirect
 )

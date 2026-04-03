@@ -3,6 +3,7 @@ package tun
 import (
 	"fmt"
 	"net"
+	_ "unsafe"
 
 	"github.com/xjasonlyu/tun2socks/v2/dialer"
 	"github.com/xjasonlyu/tun2socks/v2/engine"
@@ -23,6 +24,12 @@ type Tun struct {
 
 func (t *Tun) Device() string { return t.device }
 func (t *Tun) Host() string   { return t.host }
+
+//go:linkname engineStart github.com/xjasonlyu/tun2socks/v2/engine.start
+func engineStart() error
+
+//go:linkname engineStop github.com/xjasonlyu/tun2socks/v2/engine.stop
+func engineStop() error
 
 func New(
 	_device string,
@@ -52,15 +59,14 @@ func (t Tun) Run() chan error {
 	net.DefaultResolver.Dial = dialer.DialContext
 
 	engine.Insert(t.engine)
-	if err := engine.Start(); err != nil {
+	if err := engineStart(); err != nil {
 		errch <- fmt.Errorf("fatal error in interface engine: %w", err)
-		return errch
 	}
 	return errch
 }
 
 func (t Tun) Stop() error {
-	if err := engine.Stop(); err != nil {
+	if err := engineStop(); err != nil {
 		return fmt.Errorf("failed to stop interface engine: %w", err)
 	}
 	return nil

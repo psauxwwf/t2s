@@ -2,26 +2,44 @@ package main
 
 import (
 	"flag"
-	"log"
+	"fmt"
 	"os"
+	"time"
+
 	"t2s/internal/config"
 	"t2s/internal/dns"
 	"t2s/internal/t2s"
-	"time"
+)
+
+const (
+	_ int = iota
+	defaultCode
+	configCode
+	initCode
+	fatalCode
 )
 
 var (
-	configpath = flag.String("config", "", "path to config")
-	timeout    = flag.Int("timeout", 0, "timeout before exit")
-	repair     = flag.Bool("repair", false, "repair dns error")
+	path    = flag.String("config", "", "path to config")
+	timeout = flag.Int("timeout", 0, "timeout before exit")
+	repair  = flag.Bool("repair", false, "repair dns error")
+	save    = flag.Bool("save", false, "save default config and exit")
 )
 
 func main() {
 	flag.Parse()
+	if *save {
+		if err := config.Default(*path); err != nil {
+			fmt.Println(err)
+			os.Exit(defaultCode)
+		}
+		return
+	}
 
-	_config, err := config.New(*configpath)
+	_config, err := config.New(*path)
 	if err != nil {
-		log.Println("config parse error:", err, "used default values")
+		fmt.Println("config parse error:", err)
+		os.Exit(configCode)
 	}
 
 	_dns, err := dns.New(
@@ -33,11 +51,13 @@ func main() {
 		_config.Dns.Records,
 	)
 	if err != nil {
-		log.Fatalln(err)
+		fmt.Println(err)
+		os.Exit(initCode)
 	}
 	if *repair {
 		if err := _dns.Repair(); err != nil {
-			log.Fatalln(err)
+			fmt.Println(err)
+			os.Exit(fatalCode)
 		}
 		return
 	}
@@ -47,13 +67,15 @@ func main() {
 		_dns,
 	)
 	if err != nil {
-		log.Fatalln(err)
+		fmt.Println(err)
+		os.Exit(initCode)
 	}
 
 	if err := _t2s.Run(
 		make(chan os.Signal, 1),
 		time.Duration(*timeout)*time.Second,
 	); err != nil {
-		log.Println(err)
+		fmt.Println(err)
+		os.Exit(fatalCode)
 	}
 }
