@@ -3,6 +3,7 @@ package config
 import (
 	"errors"
 	"fmt"
+	"net/url"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -163,7 +164,7 @@ var _default = Config{
 		Proxy:    "socks5h://proxy_username:proxy_password@1.3.3.7:1080",
 	},
 	Dnstt: Dnstt{
-		Resolver: "1.1.1.1:53",
+		Resolver: "udp://1.1.1.1:53",
 		Pubkey:   "key",
 		Domain:   "t.domain.xyz",
 		Username: "username",
@@ -255,7 +256,20 @@ func (c *Config) lookup() error {
 		c.Dns.Records[net.GetDomain(c.Chisel.Server)] = c.Chisel.IP
 	}
 	if c.Proxy.Type == TypeDnstt {
-		c.Dnstt.IP = net.ToIP(c.Dnstt.Resolver)
+		u, err := url.Parse(c.Dnstt.Resolver)
+		if err != nil {
+			c.Dnstt.IP = net.ToIP(c.Dnstt.Resolver)
+			return nil
+		}
+
+		switch u.Scheme {
+		case "udp", "dot":
+			c.Dnstt.IP = net.ToIP(u.Host)
+		case "https":
+			c.Dnstt.IP = net.ResolveHost(c.Dnstt.Resolver)
+		default:
+			c.Dnstt.IP = net.ToIP(c.Dnstt.Resolver)
+		}
 	}
 	return nil
 }
