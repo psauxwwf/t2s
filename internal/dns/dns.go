@@ -3,6 +3,7 @@ package dns
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"net"
 	"regexp"
 	"strings"
@@ -134,7 +135,7 @@ func New(
 func (d *Dns) Run() error {
 	if d.enable {
 		if err := lockf(&d.m, d.manager.Set); err != nil {
-			fmt.Printf("set dns error: %v\n", err)
+			slog.Warn("set dns error", "error", err)
 		}
 		if err := d.server.ListenAndServe(); err != nil {
 			return fmt.Errorf("failed to start dns server: %w", err)
@@ -146,7 +147,7 @@ func (d *Dns) Run() error {
 func (d *Dns) Stop() error {
 	if d.enable {
 		if err := lockf(&d.m, d.manager.Revert); err != nil {
-			fmt.Printf("revert dns error: %v\n", err)
+			slog.Warn("revert dns error", "error", err)
 		}
 		if err := d.server.Shutdown(); err != nil {
 			return fmt.Errorf("failed to stop dns server: %w", err)
