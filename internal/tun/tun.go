@@ -4,10 +4,8 @@ import (
 	"fmt"
 	"net"
 
-	// "github.com/xjasonlyu/tun2socks/v2/dialer"
-	// "github.com/xjasonlyu/tun2socks/v2/engine"
-	"github.com/devil666face/tun2socks/dialer"
-	"github.com/devil666face/tun2socks/engine"
+	"github.com/xjasonlyu/tun2socks/v2/dialer"
+	"github.com/xjasonlyu/tun2socks/v2/engine"
 )
 
 type Tunnable interface {

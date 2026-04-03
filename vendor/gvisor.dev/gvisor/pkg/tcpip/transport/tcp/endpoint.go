@@ -285,7 +285,7 @@ func (*Stats) IsEndpointStats() {}
 //
 // +stateify savable
 type sndQueueInfo struct {
-	sndQueueMu sync.Mutex `state:"nosave"`
+	sndQueueMu sndQueueMutex `state:"nosave"`
 	TCPSndBufState
 }
 
@@ -354,7 +354,7 @@ type Endpoint struct {
 	endpointEntry `state:"nosave"`
 
 	// pendingProcessingMu protects pendingProcessing.
-	pendingProcessingMu sync.Mutex `state:"nosave"`
+	pendingProcessingMu pendingProcessingMutex `state:"nosave"`
 
 	// pendingProcessing is true if this endpoint is queued for processing
 	// to a TCP processor.
@@ -374,10 +374,10 @@ type Endpoint struct {
 
 	// lastError represents the last error that the endpoint reported;
 	// access to it is protected by the following mutex.
-	lastErrorMu sync.Mutex `state:"nosave"`
+	lastErrorMu lastErrorMutex `state:"nosave"`
 	lastError   tcpip.Error
 
-	rcvQueueMu sync.Mutex `state:"nosave"`
+	rcvQueueMu rcvQueueMutex `state:"nosave"`
 
 	// +checklocks:rcvQueueMu
 	TCPRcvBufState
@@ -602,6 +602,11 @@ type Endpoint struct {
 	//
 	// +checklocks:mu
 	pmtud tcpip.PMTUDStrategy
+
+	// alsoBindToV4 indicates if `any` address was used to bind a port.
+	//
+	// +checklocks:mu
+	alsoBindToV4 bool
 }
 
 // calculateAdvertisedMSS calculates the MSS to advertise.
@@ -829,11 +834,11 @@ func calculateTTL(route *stack.Route, ipv4TTL uint8, ipv6HopLimit int16) uint8 {
 //
 // +stateify savable
 type keepalive struct {
-	sync.Mutex `state:"nosave"`
-	idle       time.Duration
-	interval   time.Duration
-	count      int
-	unacked    int
+	keepaliveMutex `state:"nosave"`
+	idle           time.Duration
+	interval       time.Duration
+	count          int
+	unacked        int
 	// should never be a zero timer if the endpoint is not closed.
 	timer timer       `state:"nosave"`
 	waker sleep.Waker `state:"nosave"`
@@ -2461,6 +2466,19 @@ func (e *Endpoint) connect(addr tcpip.FullAddress, handshake bool) tcpip.Error {
 	e.effectiveNetProtos = []tcpip.NetworkProtocolNumber{netProto}
 	e.connectingAddress = connectingAddr
 
+	if e.alsoBindToV4 {
+		// If the endpoint was bound to `any` address the port will be
+		// reserved for both IPv4 and IPv6 addresses. Release the port
+		// reservation for the IPv4 address here so that the future bind
+		// for IPv4 socket will not fail.
+		portRes := ports.Reservation{
+			Networks:  []tcpip.NetworkProtocolNumber{header.IPv4ProtocolNumber},
+			Transport: ProtocolNumber,
+			Port:      e.TransportEndpointInfo.ID.LocalPort,
+		}
+		e.stack.ReleasePort(portRes)
+	}
+
 	e.initGSO()
 
 	// Connect in the restore phase does not perform handshake. Restore its
@@ -2749,6 +2767,7 @@ func (e *Endpoint) bindLocked(addr tcpip.FullAddress) (err tcpip.Error) {
 		alsoBindToV4 := !e.ops.GetV6Only() && addr.Addr == tcpip.Address{} && stackHasV4
 		if alsoBindToV4 {
 			netProtos = append(netProtos, header.IPv4ProtocolNumber)
+			e.alsoBindToV4 = true
 		}
 	}
 

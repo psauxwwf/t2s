@@ -21,7 +21,6 @@ import (
 	"time"
 
 	"gvisor.dev/gvisor/pkg/buffer"
-	"gvisor.dev/gvisor/pkg/sync"
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
 	"gvisor.dev/gvisor/pkg/tcpip/seqnum"
@@ -237,7 +236,7 @@ func (wl *protectedWriteList) InsertAfter(before, seg *segment) {
 //
 // +stateify savable
 type rtt struct {
-	sync.Mutex `state:"nosave"`
+	rttMutex `state:"nosave"`
 
 	TCPRTTState
 }
@@ -1097,9 +1096,10 @@ func (s *sender) sendData() {
 
 	var dataSent bool
 	for seg := s.writeNext; seg != nil && s.Outstanding < s.SndCwnd; seg = seg.Next() {
-		cwndLimit := (s.SndCwnd - s.Outstanding) * s.MaxPayloadSize
-		if cwndLimit < limit {
-			limit = cwndLimit
+		// NOTE(gvisor.dev/issue/11632): Use uint64 to avoid overflow.
+		cwndLimit := uint64(s.SndCwnd-s.Outstanding) * uint64(s.MaxPayloadSize)
+		if cwndLimit < uint64(limit) {
+			limit = int(cwndLimit)
 		}
 		if s.isAssignedSequenceNumber(seg) && s.ep.SACKPermitted && s.ep.scoreboard.IsSACKED(seg.sackBlock()) {
 			// Move writeNext along so that we don't try and scan data that
