@@ -1,321 +1,236 @@
-### Proxy to socks5
+# t2s
+
+Route host traffic through tun2socks with pluggable backends.
+
+Supported backends:
+
+- `socks` (`socks5`, `ss`, `relay`)
+- `ssh`
+- `chisel`
+- `dnstt`
+
+Also supports Tor via local SOCKS endpoint (`proxy.type: socks`).
+
+## Commands
+
+Run app (default action):
+
+```bash
+sudo t2s run
+# same as
+sudo t2s
+```
+
+Generate default config:
+
+```bash
+t2s save
+```
+
+Repair resolver state:
+
+```bash
+sudo t2s repair
+```
+
+Default config path: `~/.config/t2s/config.yaml`.
+
+You can override config path with `--config <path>` for any command.
+
+Install/uninstall systemd integration:
+
+```bash
+sudo t2s setup install
+sudo t2s setup uninstall
+```
+
+`setup uninstall` stops/disables service and removes unit file. Binary `/usr/local/bin/t2s` is kept.
+
+## Flags
+
+Global flags:
+
+- `--config <path>` path to config yaml
+- `--level <debug|info|warn|error>` log level
+- `--log-file <path>` if set, JSON logs go to this file; otherwise logs are text to stderr only
+
+Run-only flag:
+
+- `t2s run --timeout <sec>` stop after timeout (`0` means no timeout)
+
+## Config examples
+
+### SOCKS5
 
 ```yaml
 proxy:
-  type: "socks" # socks/ssh
----
-socks:
-  proto: "socks5" # socks5/ss/relay
-  username: "username"
-  password: "password"
-  host: "1.3.3.7"
-  port: 1080
-```
+  type: socks
 
-### Proxy to SSH
-
-```bash
-vim /etc/ssh/sshd_config
-```
-
-```bash
-AllowTcpForwarding yes
-```
-
-```yaml
-proxy:
-  type: "ssh" # socks/ssh
----
-ssh:
-  username: "user"
-  host: "1.3.3.7"
-  port: 1337
-  extra: ""
-```
-
-### Proxy to [SS](https://github.com/shadowsocks/go-shadowsocks2)
-
-> [!note] With obfuscating
-> https://github.com/shadowsocks/simple-obfs > https://github.com/shadowsocks/v2ray-plugin
-
-```bash
-wget https://github.com/shadowsocks/go-shadowsocks2/releases/download/v0.1.5/shadowsocks2-linux.tgz
-tar -xf shadowsocks2-linux.tgz
-shadowsocks2-linux -s 'ss://AEAD_CHACHA20_POLY1305:password@1.3.3.7:1080' -verbose
-```
-
-```yaml
-proxy:
-  type: "socks" # socks/ssh
----
-socks:
-  proto: "ss"
-  username: "AEAD_CHACHA20_POLY1305"
-  password: "password"
-  host: "1.3.3.7"
-  port: 1080
-  extra: ""
-```
-
-```
-ss://method:password@server_host:port/<?obfs=http;obfs-host=xxx>
-```
-
-### Proxy to [GOST](https://github.com/go-gost/gost)
-
-```bash
-wget https://github.com/go-gost/gost/releases/download/v3.0.0/gost_3.0.0_linux_amd64.tar.gz
-tar -xf gost_3.0.0_linux_amd64.tar.gz
-gost -L=relay://username:password@1.3.3.7:1080
-```
-
-```yaml
-proxy:
-  type: "socks" # socks/ssh
----
-socks:
-  proto: "relay" # socks5/ss/relay
-  username: "username"
-  password: "password"
-  host: "1.3.3.7"
-  port: 1080
-  extra: ""
-```
-
-```
-relay://<username>:<password>@server_host:port?<nodelay=false>
-```
-
-### Proxy to tor
-
-[Get bridges](https://bridges.torproject.org/bridges?transport=obfs4)
-
-```bash
-sudo apt-get install tor obfs4proxy --yes
-```
-
-```bash
-vim /etc/tor/torrc
-```
-
-```yaml
-SocksPort 127.0.0.1:1080
-DNSPort 127.1.2.53:53
-
-UseBridges 1
-ClientTransportPlugin obfs4 exec /usr/bin/obfs4proxy
-ExcludeExitNodes {ru},{by},{cn}
-
-Bridge obfs4 1.3.3.12:35401 C36F8D3C481910ED7A34F5ECEBE1C7C9A258F4A8 cert=9IygPQi2UKJ6pUjYTHl8ltg1cuPDvcsE9Os9TPVSioR0qmXU/0uSvD3rsm3jskV1nupJAg iat-mode=2
-Bridge obfs4 1.3.3.13:4444 A17E0D3FE22FA225EB4ACFEF242DBD1C71ED1D6B cert=4xg9Uri1mhV9PaHX7J4Uc2y/6VLdSiwJO8TQFDE8g0f0M1hGjQYfkO39h+sIw+L3vR1IeQ iat-mode=0
-Bridge obfs4 1.3.3.14:12558 F1A7BBDED674C0654B04ED387FFCB1A5DD2B2ED5 cert=TWRS4j6AKbKH/SL/bAqHkP7fI7C3P3dQoV+D8pRgqcJCK+r4SvZhg3k661ikgg732nuADA iat-mode=0
-Bridge obfs4 1.3.3.15:21641 E8D24300464D24AB6D905B3D01029E010363D731 cert=g7Gsuzkk2ZG88oslXKYx/Cn1XHj3DaAJRKARzN1kHrfa4B4mTCjF/0v+d1HxUr4ujYvXCQ iat-mode=0
-```
-
-_Check_
-
-```bash
-tor --verify-config
-systemctl enable tor --now
-systemctl restart tor
-curl --socks5-hostname 127.0.0.1:1080 http://wiki47qqn6tey4id7xeqb6l7uj6jueacxlqtk3adshox3zdohvo35vad.onion
-curl --socks5-hostname 127.0.0.1:1080 ident.me
-```
-
-```bash
-vim config.yaml
-```
-
-```yaml
-proxy:
-  type: "socks"
-
-interface:
-  device: "tun0"
-  exclude:
-    - "1.3.3.15"
-    - "1.3.3.13"
-    - "1.3.3.14"
-    - "1.3.3.12"
-    - "10.0.0.0/8"
-    - "172.16.0.0/12"
-    - "192.168.0.0/16"
-  metric: 512
-  sleep: 5
-
-socks:
-  host: "127.0.0.1"
-  port: 9050
-
-dns:
-  listen: "127.1.1.53"
-  render: true
-  resolvers:
-    - ip: "127.1.2.53"
-      port: 53
-      proto: tcp
-      rule: ""
-    - ip: "1.1.1.1"
-      port: 53
-      proto: tcp
-      rule: ""
-```
-
-### Proxy to [Chisel](https://github.com/jpillora/chisel)
-
-```bash
-wget https://github.com/jpillora/chisel/releases/download/v1.10.1/chisel_1.10.1_linux_amd64.gz
-gunzip chisel_1.10.1_linux_amd64.gz
-chmod +x chisel_1.10.1_linux_amd64
-openssl req -x509 -nodes -newkey rsa:2048 -keyout server.key -out server.crt -days 365
-./chisel_1.10.1_linux_amd64 server -p 443 --auth username:password --tls-cert server.crt --tls-key server.key --socks5
-```
-
-```yaml
-proxy:
-  type: "chisel"
----
-chisel:
-  server: "https://chisel.com"
-  username: "username"
-  password: "password"
-  proxy: ""
-```
-
-### Proxy to DNSTT
-
-#### Install server
-
-```bash
-docker compose -f docker-compose.dnstt.yaml up -d
-```
-
-#### Install server without docker
-
-```bash
-ssh-keygen -t rsa -N "" -f /root/.ssh/id_rsa
-cat /root/.ssh/id_rsa.pub >> /root/.ssh/authorized_keys
-ssh -N -D 127.0.0.1:1080 root@127.0.0.1 -f
-
-wget https://dnstt.network/dnstt-server-linux-amd64
-chmod +x dnstt-server-linux-amd64
-
-./dnstt-server-linux-amd64 -gen-key -privkey-file server.key -pubkey-file server.pub
-./dnstt-server-linux-amd64 -udp :53 -privkey-file server.key t.domain.xyz 127.0.0.1:1080
-cat server.pub
-```
-
-```yaml
-proxy:
-  type: dnstt
----
-dnstt:
-  resolver: udp://8.8.8.8:53
-  # resolver: dot://8.8.8.8:853
-  # resolver: https://dns.google/dns-query
-  pubkey: "7c25844f2536a3d82b9a7a4c052f119f34ec97919bf9574679897d08f241ca48"
-  domain: "t.domain.xyz"
-```
-
-### Proxy to Chisel via proxy
-
-```yaml
-proxy:
-  type: "chisel"
-interface:
-  device: "tun0"
-  exclude:
-    - "1.3.3.7"
----
-chisel:
-  server: "https://chisel.com"
-  username: "username"
-  password: "password"
-  proxy: "socks5h://proxy_username:proxy_password@1.3.3.7:1080" # only support http/socks5h/socks
-```
-
-### Proxy to ssh via Cloudfared
-
-```yaml
-proxy:
-  type: ssh
 interface:
   device: tun0
   exclude:
     - 10.0.0.0/8
     - 172.16.0.0/12
     - 192.168.0.0/16
-  custom_routes:
-    - 1.3.3.10/32 via 192.168.0.1 dev wlp3s0 # routes for cloudflare servers
-    - 1.3.3.11/32 via 192.168.0.1 dev wlp3s0 # routes for cloudflare servers
+  custom_routes: []
   metric: 512
-  sleep: 5 # sleep for connect to cloudflare
+  sleep: 0
+
 socks:
   proto: socks5
-  username: ""
-  password: ""
-  host: 127.0.0.1
+  username: username
+  password: password
+  host: 1.3.3.7
   port: 1080
   args: ""
-ssh:
-  username: "user"
-  host: "ssh.host.com"
-  port: 22
-  args:
-    - -o
-    - ProxyCommand=cloudflared access ssh --hostname %h
-chisel:
-  server: ""
-  username: ""
-  password: ""
-  proxy: ""
+
 dns:
+  enable: true
   listen: 127.1.1.53
   render: true
+  resolvectl: true
   resolvers:
     - ip: 1.1.1.1
       proto: tcp
       port: 53
-      rule: ""
-  records:
-    ssh.host.com: 1.3.3.11 # lookup your host (same as cloudflare servers)
+      rule: ".*"
+  records: {}
 ```
 
-### Custom records for dns
+### Shadowsocks (`proto: ss`)
+
+```yaml
+proxy:
+  type: socks
+socks:
+  proto: ss
+  username: AEAD_CHACHA20_POLY1305
+  password: password
+  host: 1.3.3.7
+  port: 1080
+  args: ""
+```
+
+### GOST relay (`proto: relay`)
+
+```yaml
+proxy:
+  type: socks
+socks:
+  proto: relay
+  username: username
+  password: password
+  host: 1.3.3.7
+  port: 1080
+  args: "nodelay=true"
+```
+
+### SSH
+
+```yaml
+proxy:
+  type: ssh
+ssh:
+  username: user
+  host: ssh.host.com
+  port: 22
+  args:
+    - -o
+    - ProxyCommand=cloudflared access ssh --hostname %h
+```
+
+### Chisel
+
+```yaml
+proxy:
+  type: chisel
+chisel:
+  server: https://chisel.domain.xyz
+  username: username
+  password: password
+  proxy: ""
+```
+
+Chisel via proxy:
+
+```yaml
+proxy:
+  type: chisel
+interface:
+  device: tun0
+  exclude:
+    - 1.3.3.7
+chisel:
+  server: https://chisel.domain.xyz
+  username: username
+  password: password
+  proxy: socks5h://proxy_username:proxy_password@1.3.3.7:1080
+```
+
+### DNSTT
+
+```yaml
+proxy:
+  type: dnstt
+dnstt:
+  resolver: udp://8.8.8.8:53
+  # resolver: dot://8.8.8.8:853
+  # resolver: https://dns.google/dns-query
+  # resolver: udp://77.88.8.8:53
+  # resolver: dot://77.88.8.8:853
+  # resolver: https://common.dot.dns.yandex.net/dns-query
+  pubkey: "7c25844f2536a3d82b9a7a4c052f119f34ec97919bf9574679897d08f241ca48"
+  domain: t.domain.xyz
+  username: username
+  password: password
+```
+
+### Tor (via local SOCKS)
+
+```yaml
+proxy:
+  type: socks
+socks:
+  proto: socks5
+  host: 127.0.0.1
+  port: 9050
+  username: ""
+  password: ""
+  args: ""
+```
+
+## DNS snippets
+
+Custom records:
 
 ```yaml
 dns:
-  listen: "127.1.1.53"
+  listen: 127.1.1.53
   render: true
+  resolvectl: true
   resolvers:
-    - ip: "1.1.1.1"
+    - ip: 1.1.1.1
       port: 53
       proto: tcp
-      rule: ""
+      rule: ".*"
   records:
-    test01.lan: "10.10.10.1"
-    test02.lan: "10.10.10.2"
-    test03.lan: "10.10.10.3"
-    test04.lan: "10.10.10.4"
+    test01.lan: 10.10.10.1
+    test02.lan: 10.10.10.2
 ```
 
-### Lock dns leak
-
-> Local dns 10.10.10.10 support resolv only for github.com
+Rule-based resolver (leak control):
 
 ```yaml
 dns:
-  listen: "127.1.1.53"
-  render: true
   resolvers:
-    - ip: "1.1.1.1"
+    - ip: 1.1.1.1
       port: 53
       proto: tcp
-      rule: ""
-    - ip: "10.10.10.10"
+      rule: ".*"
+    - ip: 10.10.10.10
       port: 53
       proto: udp
-      rule: '.*github\.com'
+      rule: ".*github\\.com"
 ```
 
 ### If you run via ssh - must add exclude to your ssh connect address
@@ -336,48 +251,9 @@ interface:
     - "192.168.0.0/16"
 ```
 
-### Systemd unit
-
-```ini
-[Unit]
-Description=t2s
-After=network.target
-Wants=network.target
-
-[Service]
-User=root
-ExecStart=/usr/local/bin/t2s
-Restart=on-failure
-RestartSec=5
-
-[Install]
-WantedBy=multi-user.targe
-```
-
----
-
-### Repait systemd-resolved if symlink deleted
-
-```bash
-t2s -repair
-```
-
-or
-
-```bash
-for in in $(ip a | grep '^[0-9]:' | cut -d ':' -f 2 | tr -d ' ' | grep -v lo); do sudo resolvectl revert $in; done
-sudo rm -f /etc/resolv.conf
-sudo ln -sf /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf
-sudo systemctl restart systemd-resolved
-```
-
----
+## References
 
 - [Proxy models for tun2socks](https://github.com/xjasonlyu/tun2socks/wiki/Proxy-Models)
-- DNSTT
-  - [dnstt classic](https://dnstt.network/)
-    - [deploy](https://github.com/bugfloyd/dnstt-deploy)
-  - [slipstream](https://github.com/Mygod/slipstream-rust) - another dns server/client
-    - [deploy](https://github.com/dnstt-xyz/slipstream-socks-deploy)
-  - [dnstt android app](https://github.com/dnstt-xyz/dnstt_xyz_app)
-  - [public DNS list](https://dnstt.xyz/servers/dns/ru.json)
+- [dnstt](https://dnstt.network/)
+- [gost](https://github.com/go-gost/gost)
+- [chisel](https://github.com/jpillora/chisel)

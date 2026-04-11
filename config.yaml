@@ -34,6 +34,9 @@ dnstt:
   resolver: udp://8.8.8.8:53
   # resolver: dot://8.8.8.8:853
   # resolver: https://dns.google/dns-query
+  # resolver: udp://77.88.8.8:53
+  # resolver: dot://77.88.8.8:853
+  # resolver: https://common.dot.dns.yandex.net/dns-query
   pubkey: key
   domain: t.domain.xyz
   username: username
@@ -44,7 +47,7 @@ dns:
   render: true
   resolvectl: true
   resolvers:
-    - ip: 8.8.8.8
+    - ip: 1.1.1.1
       proto: tcp
       port: 53
       rule: .*
