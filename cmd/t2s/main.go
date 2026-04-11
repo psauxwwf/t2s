@@ -14,13 +14,37 @@ import (
 	"t2s/internal/config"
 	"t2s/internal/dns"
 	"t2s/internal/t2s"
+	"t2s/pkg/fs"
+	"t2s/pkg/shell"
+)
+
+const (
+	dst         = "/usr/local/bin/t2s"
+	unitPath    = "/etc/systemd/system/t2s.service"
+	serviceName = "t2s"
+	unit        = `[Unit]
+Description=t2s tunnel service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStartPre=/usr/local/bin/t2s repair
+ExecStart=/usr/local/bin/t2s run
+Restart=no
+RestartForceExitStatus=4
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
+`
 )
 
 const (
 	_ int = iota
-	defaultCode
 	configCode
 	initCode
+	installCode
 	fatalCode
 )
 
@@ -62,12 +86,15 @@ func main() {
 func rootCmd() *cobra.Command {
 	var (
 		path    string
-		timeout int
 		level   string
+		logFile string
 	)
 
 	runE := func(_ *cobra.Command, _ []string) error {
-		return run(path, timeout, false)
+		if err := run(path, 0, false); err != nil {
+			return newExitError(fatalCode, err)
+		}
+		return nil
 	}
 
 	root := &cobra.Command{
@@ -92,6 +119,7 @@ DNS features:
 Command model:
   - run    start tunnel and routing (default when no subcommand)
   - save   write default config file and exit
+  - setup  system integration (install/uninstall systemd unit)
   - repair repair resolver state (/etc/resolv.conf + resolvectl)
 
 Privileges:
@@ -99,6 +127,9 @@ Privileges:
 
 Global flags:
   --config <path>   path to config yaml
+  --log-file <path> write JSON logs to file (optional)
+
+Run flags:
   --timeout <sec>   stop after timeout seconds (0 = no timeout)
 
 Default config path:
@@ -129,6 +160,12 @@ Operational notes:
   # Start and auto-exit after 10 minutes
   t2s run --config /etc/t2s/config.yaml --timeout 600
 
+  # Install systemd unit + binary copy
+  t2s setup install
+
+  # Uninstall systemd unit
+  t2s setup uninstall
+
   # Repair DNS/resolver state
   t2s repair --config /etc/t2s/config.yaml
 
@@ -138,37 +175,44 @@ Operational notes:
 			var parsedLevel slog.Level
 			if err := parsedLevel.UnmarshalText([]byte(level)); err != nil {
 				fmt.Fprintf(os.Stderr, "invalid log level %q: %v\n", level, err)
-				return newExitError(2, err)
+				return newExitError(initCode, err)
 			}
 
-			logFile, err := os.OpenFile("t2s.json", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "failed to open log file: %v\n", err)
-				return newExitError(fatalCode, err)
+			text := slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
+				AddSource: true,
+				Level:     parsedLevel,
+			})
+
+			log := slog.New(text)
+			if logFile != "" {
+				f, err := os.OpenFile(logFile, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "failed to open log file %q: %v\n", logFile, err)
+					return newExitError(initCode, err)
+				}
+
+				log = slog.New(
+					slog.NewMultiHandler(
+						text,
+						slog.NewJSONHandler(f, &slog.HandlerOptions{
+							AddSource: true,
+							Level:     parsedLevel,
+						}),
+					),
+				)
 			}
 
-			log := slog.New(
-				slog.NewMultiHandler(
-					slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
-						AddSource: true,
-						Level:     parsedLevel,
-					}),
-					slog.NewJSONHandler(logFile, &slog.HandlerOptions{
-						AddSource: true,
-						Level:     parsedLevel,
-					}),
-				),
-			)
 			slog.SetDefault(log)
 			return nil
 		},
 	}
 
 	root.PersistentFlags().StringVar(&path, "config", "", "path to config")
-	root.PersistentFlags().IntVar(&timeout, "timeout", 0, "timeout before exit")
+	root.PersistentFlags().StringVar(&logFile, "log-file", "", "path to JSON log file (optional)")
 	root.PersistentFlags().StringVar(&level, "level", "info", "log level (debug, info, warn, error)")
 
-	root.AddCommand(&cobra.Command{
+	runTimeout := 0
+	runCmd := &cobra.Command{
 		Use:   "run",
 		Short: "Start tunnel routing",
 		Long: `Run initializes DNS manager, starts the selected proxy backend,
@@ -178,8 +222,15 @@ This is the default action when t2s is called without a subcommand.`,
 		Example: `  t2s run --config /etc/t2s/config.yaml
   t2s --config /etc/t2s/config.yaml
   t2s run --config /etc/t2s/config.yaml --timeout 300`,
-		RunE: runE,
-	})
+		RunE: func(_ *cobra.Command, _ []string) error {
+			if err := run(path, runTimeout, false); err != nil {
+				return newExitError(fatalCode, err)
+			}
+			return nil
+		},
+	}
+	runCmd.Flags().IntVar(&runTimeout, "timeout", 0, "timeout before exit")
+	root.AddCommand(runCmd)
 
 	root.AddCommand(&cobra.Command{
 		Use:   "repair",
@@ -189,7 +240,10 @@ when /etc/resolv.conf symlink or interface DNS state is broken.`,
 		Example: `  t2s repair
   t2s repair --config /etc/t2s/config.yaml`,
 		RunE: func(_ *cobra.Command, _ []string) error {
-			return run(path, timeout, true)
+			if err := run(path, 0, true); err != nil {
+				return newExitError(fatalCode, err)
+			}
+			return nil
 		},
 	})
 
@@ -202,23 +256,111 @@ If --config is omitted, default path is ~/.config/t2s/config.yaml.`,
   t2s save --config /etc/t2s/config.yaml`,
 		RunE: func(_ *cobra.Command, _ []string) error {
 			if err := config.Default(path); err != nil {
-				return newExitError(defaultCode, err)
+				return newExitError(configCode, err)
 			}
 			return nil
 		},
 	})
 
+	setup := &cobra.Command{
+		Use:   "setup",
+		Short: "Install or uninstall system integration",
+		Long: `Setup manages local installation artifacts for t2s.
+
+Subcommands:
+  - install   copy running binary to /usr/local/bin and create systemd unit
+  - uninstall stop/disable service and remove systemd unit file
+
+Requires superuser privileges.`,
+	}
+
+	setup.AddCommand(&cobra.Command{
+		Use:   "install",
+		Short: "Install binary and create systemd unit",
+		Example: `  t2s setup install
+  sudo t2s setup install`,
+		RunE: func(_ *cobra.Command, _ []string) error {
+			if err := install(); err != nil {
+				return newExitError(installCode, err)
+			}
+			return nil
+		},
+	})
+
+	setup.AddCommand(&cobra.Command{
+		Use:   "uninstall",
+		Short: "Disable service and remove systemd unit",
+		Example: `  t2s setup uninstall
+  sudo t2s setup uninstall`,
+		RunE: func(_ *cobra.Command, _ []string) error {
+			if err := uninstall(); err != nil {
+				return newExitError(installCode, err)
+			}
+			return nil
+		},
+	})
+
+	root.AddCommand(setup)
+
 	return root
+}
+
+func install() error {
+	if os.Geteuid() != 0 {
+		return errors.New("install must be run as superuser")
+	}
+
+	exe, err := os.Executable()
+	if err != nil {
+		return fmt.Errorf("resolve executable path: %w", err)
+	}
+
+	if err := fs.CopyFile(exe, dst); err != nil {
+		return fmt.Errorf("copy binary to %q: %w", dst, err)
+	}
+
+	if err := os.WriteFile(unitPath, []byte(unit), 0o644); err != nil {
+		return fmt.Errorf("write systemd unit %q: %w", unitPath, err)
+	}
+
+	if _, err := shell.New("systemctl", "daemon-reload").Run(); err != nil {
+		return fmt.Errorf("reload systemd units: %w", err)
+	}
+
+	slog.Info("install complete", "binary", dst, "unit", unitPath)
+	slog.Info("run next", "cmd", "systemctl enable --now t2s")
+	return nil
+}
+
+func uninstall() error {
+	if os.Geteuid() != 0 {
+		return errors.New("uninstall must be run as superuser")
+	}
+
+	if _, _, err := shell.New("systemctl", "disable", "--now", serviceName).RunCode(); err != nil {
+		slog.Warn("failed to disable/stop service", "service", serviceName, "error", err)
+	}
+
+	if err := os.Remove(unitPath); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("remove systemd unit %q: %w", unitPath, err)
+	}
+
+	if _, err := shell.New("systemctl", "daemon-reload").Run(); err != nil {
+		return fmt.Errorf("reload systemd units: %w", err)
+	}
+
+	slog.Info("uninstall complete", "unit", unitPath)
+	return nil
 }
 
 func run(path string, timeout int, repair bool) error {
 	if os.Geteuid() != 0 {
-		return newExitError(fatalCode, errors.New("this must be superuser"))
+		return fmt.Errorf("this must be superuser")
 	}
 
 	_config, err := config.New(path)
 	if err != nil {
-		return newExitError(configCode, fmt.Errorf("config parse error: %w", err))
+		return fmt.Errorf("config parse error: %w", err)
 	}
 
 	_dns, err := dns.New(
@@ -230,12 +372,12 @@ func run(path string, timeout int, repair bool) error {
 		_config.Dns.Records,
 	)
 	if err != nil {
-		return newExitError(initCode, err)
+		return fmt.Errorf("dns error: %w", err)
 	}
 
 	if repair {
 		if err := _dns.Repair(); err != nil {
-			return newExitError(fatalCode, err)
+			return fmt.Errorf("dns repair error: %w", err)
 		}
 		slog.Info("dns repair complete")
 		return nil
@@ -245,14 +387,14 @@ func run(path string, timeout int, repair bool) error {
 
 	_t2s, err := t2s.New(_config, _dns)
 	if err != nil {
-		return newExitError(initCode, err)
+		return fmt.Errorf("fatal init error: %w", err)
 	}
 
 	if err := _t2s.Run(
 		make(chan os.Signal, 1),
 		time.Duration(timeout)*time.Second,
 	); err != nil {
-		return newExitError(fatalCode, err)
+		return fmt.Errorf("fatal runtime error: %w", err)
 	}
 
 	return nil
