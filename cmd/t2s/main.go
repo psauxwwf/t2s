@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/charmbracelet/fang"
@@ -17,6 +18,8 @@ import (
 	"t2s/pkg/fs"
 	"t2s/pkg/shell"
 )
+
+var version = "dev"
 
 const (
 	dst         = "/usr/local/bin/t2s"
@@ -75,7 +78,7 @@ func newExitError(code int, err error) error {
 }
 
 func main() {
-	if err := fang.Execute(context.Background(), rootCmd()); err != nil {
+	if err := fang.Execute(context.Background(), rootCmd(), fang.WithoutVersion()); err != nil {
 		if err, ok := errors.AsType[*exitError](err); ok {
 			os.Exit(err.code)
 		}
@@ -98,8 +101,9 @@ func rootCmd() *cobra.Command {
 	}
 
 	root := &cobra.Command{
-		Use:   "t2s",
-		Short: "Route system traffic through proxy tunnel",
+		Use:     "t2s",
+		Version: currentVersion(),
+		Short:   "Route system traffic through proxy tunnel",
 		Long: `t2s creates a local tun interface, starts a tun2socks relay, and routes
 default traffic through a selected proxy backend.
 
@@ -303,6 +307,14 @@ Requires superuser privileges.`,
 	root.AddCommand(setup)
 
 	return root
+}
+
+func currentVersion() string {
+	v := strings.TrimSpace(version)
+	if v == "" {
+		return "dev"
+	}
+	return v
 }
 
 func install() error {
