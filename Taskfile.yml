@@ -4,7 +4,7 @@ dotenv: ["build.env"]
 
 vars:
   gobin: go
-  ldflags: "-extldflags '-static' -w -s -buildid="
+  ldflags: "-extldflags '-static' -w -s -buildid= -X main.version={{.VERSION}}"
   gcflags: "all=-trimpath={{.PWD}} -dwarf=false -l"
   asmflags: "all=-trimpath={{.PWD}}"
   bin: "{{.PWD}}/bin"
@@ -25,9 +25,25 @@ tasks:
     cmds:
       - mkdir -p {{.bin}}
 
+  version:sync:
+    desc: sync VERSION in build.env from latest git tag
+    internal: true
+    silent: true
+    cmds:
+      - |
+        TAG="{{.VERSION}}"
+        if [ -z "$TAG" ]; then
+          TAG="$(git tag --sort=-version:refname | { IFS= read -r line; printf '%s' "$line"; })"
+        fi
+        if [ -z "$TAG" ]; then
+          TAG=dev
+        fi
+        printf 'VERSION=%s\n' "$TAG" > build.env
+
   build:
     desc: common build
     deps:
+      - version:sync
       - build:linux
 
   build:linux:
@@ -49,14 +65,16 @@ tasks:
 
   release:
     desc: build and publish github release
-    deps:
-      - build
+    vars:
+      TAG:
+        sh: printf 'v%s' "$(date +%m.%d.%H)"
     silent: false
     cmds:
+      - task: build
+        vars:
+          VERSION: "{{.TAG}}"
       - tar -czf {{.release_linux_archive}} -C {{.bin}} {{.app}}
-      - |
-        TAG=$(date +%m.%d.%H)
-        gh release create "$TAG" {{.release_linux_archive}}
+      - gh release create "{{.TAG}}" {{.release_linux_archive}}
 
   build:docker:dnstt:
     desc: build docker dnstt server image
