@@ -80,8 +80,10 @@ func newExitError(code int, err error) error {
 func main() {
 	if err := fang.Execute(context.Background(), rootCmd(), fang.WithoutVersion()); err != nil {
 		if err, ok := errors.AsType[*exitError](err); ok {
+			fmt.Println(err.err)
 			os.Exit(err.code)
 		}
+		fmt.Println(err)
 		os.Exit(fatalCode)
 	}
 }
