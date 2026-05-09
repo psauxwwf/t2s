@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+
 	"t2s/internal/config"
 
 	"github.com/miekg/dns"
