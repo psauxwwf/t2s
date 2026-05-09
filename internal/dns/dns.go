@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+
 	"t2s/internal/config"
 
 	"github.com/miekg/dns"
@@ -42,6 +43,7 @@ func (d *Dns) resolveCustom(w dns.ResponseWriter, r *dns.Msg) error {
 		if ip, found := d.records[domain]; found && q.Qtype == dns.TypeA {
 			message := new(dns.Msg)
 			message.SetReply(r)
+			message.Authoritative = true
 			message.Answer = append(message.Answer, &dns.A{
 				Hdr: dns.RR_Header{Name: q.Name, Rrtype: dns.TypeA, Class: dns.ClassINET, Ttl: 60},
 				A:   net.ParseIP(ip),
@@ -75,7 +77,10 @@ func (d *Dns) resolveExchange(w dns.ResponseWriter, r *dns.Msg) error {
 		if err != nil {
 			continue
 		}
-		if resp == nil || len(resp.Answer) == 0 {
+		if resp == nil {
+			continue
+		}
+		if len(resp.Answer) == 0 {
 			continue
 		}
 		return w.WriteMsg(resp)
