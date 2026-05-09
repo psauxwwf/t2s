@@ -8,6 +8,7 @@ Supported backends:
 - `ssh`
 - `chisel`
 - `dnstt`
+- `olcrtc`
 
 Also supports Tor via local SOCKS endpoint (`proxy.type: socks`).
 
@@ -183,6 +184,44 @@ dnstt:
   domain: t.domain.xyz
   username: username
   password: password
+```
+
+### olcRTC
+
+```yaml
+proxy:
+  type: olcrtc
+interface:
+  exclude:
+    - 203.0.113.10/24
+    - 203.0.113.10/23
+    - 194.1.214.0/24
+olcrtc:
+  carrier: wbstream
+  transport: datachannel
+  room_id: your-room-id
+  client_id: your-client-id
+  key: your-64-char-hex-key
+  dns: 1.1.1.1:53
+```
+
+For `olcrtc` with `wbstream`, add these `interface.exclude` networks so the signaling/media path does not loop into the tunnel:
+
+- `203.0.113.10/24`
+- `203.0.113.10/23`
+- `194.1.214.0/24`
+
+These are the addresses used by `stream.wb.ru` and `wbstream01-el.wb.ru`.
+
+You can extract active addresses with `strace`:
+
+```bash
+sudo strace -f -e trace=connect,sendto,recvfrom -s 256 \
+  ./olcrtc -mode cnc -carrier "wbstream" -id "your-room-id" \
+  -client-id "your-client-id" -key "your-64-char-hex-key" \
+  -link direct -transport "datachannel" -dns "1.1.1.1:53" -data data \
+  -socks-host 0.0.0.0 -socks-port 1080 2> strace.log
+grep -oP 'sin_port=htons\(\K\d+(?=\), sin_addr=inet_addr\("((?:\d{1,3}\.){3}\d{1,3})"\))|inet_addr\("\K(?:\d{1,3}\.){3}\d{1,3}(?="\))' strace.log | sort -u
 ```
 
 ### Tor (via local SOCKS)
