@@ -25,6 +25,7 @@ const (
 	TypeSsh    = "ssh"
 	TypeChisel = "chisel"
 	TypeDnstt  = "dnstt"
+	TypeOlcrtc = "olcrtc"
 )
 
 const (
@@ -93,6 +94,15 @@ type Dnstt struct {
 	IP       string `yaml:"-"`
 }
 
+type Olcrtc struct {
+	Carrier   string `yaml:"carrier"`
+	Transport string `yaml:"transport"`
+	RoomID    string `yaml:"room_id"`
+	ClientID  string `yaml:"client_id"`
+	Key       string `yaml:"key"`
+	DNS       string `yaml:"dns"`
+}
+
 type Dns struct {
 	Enable     *bool             `yaml:"enable"`
 	Listen     string            `yaml:"listen"`
@@ -117,6 +127,7 @@ type Config struct {
 	Ssh       Ssh       `yaml:"ssh"`
 	Chisel    Chisel    `yaml:"chisel"`
 	Dnstt     Dnstt     `yaml:"dnstt"`
+	Olcrtc    Olcrtc    `yaml:"olcrtc"`
 	Dns       Dns       `yaml:"dns"`
 
 	RelayPort int `yaml:"-"`
@@ -169,6 +180,14 @@ var _default = Config{
 		Domain:   "t.domain.xyz",
 		Username: "username",
 		Password: "password",
+	},
+	Olcrtc: Olcrtc{
+		Carrier:   "wbstream",
+		Transport: "datachannel",
+		RoomID:    "your-room-id",
+		ClientID:  "your-client-id",
+		Key:       "your-64-char-hex-key",
+		DNS:       "1.1.1.1:53",
 	},
 	Dns: Dns{
 		Enable:     new(true),
@@ -251,6 +270,10 @@ func New(filename string) (*Config, error) {
 }
 
 func (c *Config) lookup() error {
+	if c.Dns.Records == nil {
+		c.Dns.Records = map[string]string{}
+	}
+
 	if c.Proxy.Type == TypeChisel {
 		c.Chisel.IP = net.ResolveHost(c.Chisel.Server)
 		c.Dns.Records[net.GetDomain(c.Chisel.Server)] = c.Chisel.IP
@@ -270,6 +293,10 @@ func (c *Config) lookup() error {
 		default:
 			c.Dnstt.IP = net.ToIP(c.Dnstt.Resolver)
 		}
+	}
+	if c.Proxy.Type == TypeOlcrtc {
+		c.Dns.Records["stream.wb.ru"] = net.ResolveHost("stream.wb.ru")
+		c.Dns.Records["wbstream01-el.wb.ru"] = net.ResolveHost("wbstream01-el.wb.ru")
 	}
 	return nil
 }
