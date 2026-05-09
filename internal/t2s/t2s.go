@@ -87,6 +87,7 @@ func (t *Tun2socksme) Run(sigch chan os.Signal, timeout time.Duration) error {
 			errch <- fmt.Errorf("dns fatal error: %w", err)
 		}
 	}()
+
 	go func() {
 		time.Sleep(time.Second * time.Duration(t.sleep))
 		if err := t.Defgate(); err != nil {
@@ -189,6 +190,9 @@ func (t *Tun2socksme) addRoutes() error {
 		}
 		return nil
 	}
+	if t.tun.Host() == "" {
+		return nil
+	}
 	if _, err := shell.New("ip", "ro", "add", t.tun.Host(), "via", t.ipro.defgate.address, "dev", t.ipro.defgate.device).Run(); err != nil {
 		return fmt.Errorf("failed to set route %s via %s", t.tun.Host(), t.ipro.defgate.device)
 	}
@@ -206,6 +210,9 @@ func (t *Tun2socksme) deleteRoutes() error {
 		if err := t.customRoutesDel(); err != nil {
 			return fmt.Errorf("failed to delete custom routes: %w", err)
 		}
+		return nil
+	}
+	if t.tun.Host() == "" {
 		return nil
 	}
 	if _, _err := shell.New("ip", "ro", "del", t.tun.Host()).Run(); _err != nil {
@@ -230,6 +237,7 @@ func getTun(_config *config.Config) (tun.Tunnable, error) {
 		config.TypeSsh:    tun.Ssh,
 		config.TypeChisel: tun.Chisel,
 		config.TypeDnstt:  tun.Dnstt,
+		config.TypeOlcrtc: tun.Olcrtc,
 	}
 
 	if f, ok := m[_config.Proxy.Type]; ok {
