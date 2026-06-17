@@ -114,7 +114,6 @@ Supported backends:
   - ssh
   - chisel
   - dnstt
-  - olcrtc
   - tor (via local socks endpoint)
 
 DNS features:
@@ -151,7 +150,6 @@ Modes and specifics:
   - chisel: uses chisel socks backend (TLS/web-friendly transport).
   - chisel via proxy: set chisel.proxy and exclude proxy host from tun route.
   - dnstt: DNS-tunnel backend, requires resolver/pubkey/domain.
-  - olcrtc: WebRTC-based backend, requires carrier/transport/room_id/client_id/key.
   - tor: use local tor socks port; exclude tor bridge/public IPs to avoid loops.
 
 Operational notes:
