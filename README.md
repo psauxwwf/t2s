@@ -40,11 +40,11 @@ You can override config path with `--config <path>` for any command.
 Install/uninstall systemd integration:
 
 ```bash
-sudo t2s setup install
-sudo t2s setup uninstall
+sudo t2s service install
+sudo t2s service uninstall
 ```
 
-`setup uninstall` stops/disables service and removes unit file. Binary `/usr/local/bin/t2s` is kept.
+`service uninstall` stops/disables service and removes unit file. Binary `/usr/local/bin/t2s` is kept.
 
 ## Flags
 
