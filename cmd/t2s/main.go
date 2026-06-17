@@ -125,11 +125,11 @@ DNS features:
 Command model:
   - run    start tunnel and routing (default when no subcommand)
   - save   write default config file and exit
-  - setup  system integration (install/uninstall systemd unit)
+  - service system integration (install/uninstall systemd unit)
   - repair repair resolver state (/etc/resolv.conf + resolvectl)
 
 Privileges:
-  - run/repair require root (superuser)
+  - run/repair/service require root (superuser)
 
 Global flags:
   --config <path>   path to config yaml
@@ -153,7 +153,7 @@ Modes and specifics:
   - tor: use local tor socks port; exclude tor bridge/public IPs to avoid loops.
 
 Operational notes:
-  - run/repair require superuser privileges.
+  - run/repair/service require superuser privileges.
   - when running over SSH, add current SSH peer IP to interface.exclude.
   - use resolver rules + custom records for DNS leak control.
 `,
@@ -167,10 +167,10 @@ Operational notes:
   t2s run --config /etc/t2s/config.yaml --timeout 600
 
   # Install systemd unit + binary copy
-  t2s setup install
+  t2s service install
 
   # Uninstall systemd unit
-  t2s setup uninstall
+  t2s service uninstall
 
   # Repair DNS/resolver state
   t2s repair --config /etc/t2s/config.yaml
@@ -268,8 +268,8 @@ If --config is omitted, default path is ~/.config/t2s/config.yaml.`,
 		},
 	})
 
-	setup := &cobra.Command{
-		Use:   "setup",
+	service := &cobra.Command{
+		Use:   "service",
 		Short: "Install or uninstall system integration",
 		Long: `Setup manages local installation artifacts for t2s.
 
@@ -280,11 +280,11 @@ Subcommands:
 Requires superuser privileges.`,
 	}
 
-	setup.AddCommand(&cobra.Command{
+	service.AddCommand(&cobra.Command{
 		Use:   "install",
 		Short: "Install binary and create systemd unit",
-		Example: `  t2s setup install
-  sudo t2s setup install`,
+		Example: `  t2s service install
+  sudo t2s service install`,
 		RunE: func(_ *cobra.Command, _ []string) error {
 			if err := install(); err != nil {
 				return newExitError(installCode, err)
@@ -293,11 +293,11 @@ Requires superuser privileges.`,
 		},
 	})
 
-	setup.AddCommand(&cobra.Command{
+	service.AddCommand(&cobra.Command{
 		Use:   "uninstall",
 		Short: "Disable service and remove systemd unit",
-		Example: `  t2s setup uninstall
-  sudo t2s setup uninstall`,
+		Example: `  t2s service uninstall
+  sudo t2s service uninstall`,
 		RunE: func(_ *cobra.Command, _ []string) error {
 			if err := uninstall(); err != nil {
 				return newExitError(installCode, err)
@@ -306,7 +306,7 @@ Requires superuser privileges.`,
 		},
 	})
 
-	root.AddCommand(setup)
+	root.AddCommand(service)
 
 	return root
 }
@@ -341,8 +341,8 @@ func install() error {
 		return fmt.Errorf("reload systemd units: %w", err)
 	}
 
-	slog.Info("install complete", "binary", dst, "unit", unitPath)
-	slog.Info("run next", "cmd", "systemctl enable --now t2s")
+	slog.Info("complete", "binary", dst, "unit", unitPath)
+	slog.Info("run", "cmd", "systemctl enable --now t2s")
 	return nil
 }
 
@@ -363,7 +363,7 @@ func uninstall() error {
 		return fmt.Errorf("reload systemd units: %w", err)
 	}
 
-	slog.Info("uninstall complete", "unit", unitPath)
+	slog.Info("complete", "unit", unitPath)
 	return nil
 }
 
