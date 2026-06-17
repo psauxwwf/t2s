@@ -1,10 +1,8 @@
 version: "3"
 
-dotenv: ["build.env"]
-
 vars:
   gobin: go
-  ldflags: "-extldflags '-static' -w -s -buildid= -X main.version={{.VERSION}}"
+  ldflags: "-extldflags '-static' -w -s -buildid="
   gcflags: "all=-trimpath={{.PWD}} -dwarf=false -l"
   asmflags: "all=-trimpath={{.PWD}}"
   bin: "{{.PWD}}/bin"
@@ -25,25 +23,9 @@ tasks:
     cmds:
       - mkdir -p {{.bin}}
 
-  version:sync:
-    desc: sync VERSION in build.env from latest git tag
-    internal: true
-    silent: true
-    cmds:
-      - |
-        TAG="{{.VERSION}}"
-        if [ -z "$TAG" ]; then
-          TAG="$(git tag --sort=-version:refname | { IFS= read -r line; printf '%s' "$line"; })"
-        fi
-        if [ -z "$TAG" ]; then
-          TAG=dev
-        fi
-        printf 'VERSION=%s\n' "$TAG" > build.env
-
   build:
     desc: common build
     deps:
-      - version:sync
       - build:linux
 
   build:linux:
@@ -53,9 +35,10 @@ tasks:
     silent: true
     cmds:
       - >
+        VERSION="{{.VERSION}}"; [ -n "$VERSION" ] || VERSION=dev;
         {{.gobin}} build
         -tags netgo
-        -ldflags="{{.ldflags}}" 
+        -ldflags="{{.ldflags}} -X main.version=$VERSION" 
         -trimpath 
         -gcflags="{{.gcflags}}" 
         -asmflags="{{.asmflags}}" 

@@ -2,14 +2,8 @@ name: Release
 
 on:
   push:
-    branches:
-      - main
-  workflow_dispatch:
-    inputs:
-      branch:
-        description: Branch to release from
-        required: true
-        default: main
+    tags:
+      - "v*"
 
 permissions:
   contents: write
@@ -22,8 +16,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.inputs.branch || github.ref_name }}
 
       - name: Install system dependencies
         run: sudo apt-get update && sudo apt-get install -y make binutils tar gzip unzip curl
@@ -37,19 +29,16 @@ jobs:
         uses: arduino/setup-task@v2
 
       - name: Build project
-        run: task build
+        run: task build VERSION=${{ github.ref_name }}
 
       - name: Pack release artifacts
         run: |
           tar -czf "./bin/${{ github.event.repository.name }}_linux_amd64.tar.gz" -C ./bin "${{ github.event.repository.name }}"
 
-      - name: Set tag name
-        run: echo "GITHUB_RELEASE_TAG=$(date +v%m.%d.%H)" >> "$GITHUB_ENV"
-
       - name: Create GitHub release and upload assets
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ env.GITHUB_RELEASE_TAG }}
+          tag_name: ${{ github.ref_name }}
           draft: false
           prerelease: false
           files: |
