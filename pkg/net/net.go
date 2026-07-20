@@ -16,6 +16,10 @@ func RandomPort() (int, error) {
 
 func ResolveHost(link string) string {
 	hostname := GetDomain(link)
+	return ResolveIP(hostname)
+}
+
+func ResolveIP(hostname string) string {
 	if net.ParseIP(hostname) != nil {
 		return hostname
 	}
