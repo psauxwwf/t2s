@@ -8,6 +8,7 @@ Supported backends:
 - `ssh`
 - `chisel`
 - `dnstt`
+- `freeturn`
 
 Also supports Tor via local SOCKS endpoint (`proxy.type: socks`).
 
@@ -185,6 +186,34 @@ dnstt:
   password: password
 ```
 
+### Free TURN Proxy
+
+This backend runs the upstream `free-turn-proxy` Go client in-process through
+its public `mobile` API and exposes it to tun2socks as
+`socks5://127.0.0.1:<dynamic-port>`.
+
+```yaml
+proxy:
+  type: freeturn
+freeturn:
+  peer: 203.0.113.10:56002
+  links:
+    - https://vk.ru/call/join/example-1
+    - https://vk.ru/call/join/example-2
+  obf_profile: rtpopus
+  obf_key: 61caefa65c98d428b426d40c75251d77d96a46c2c8962284168704ba37ef6ef5
+  manual_captcha: false
+```
+
+`-mode tcp` is fixed and is not exposed in YAML. `manual_captcha` is a boolean
+and defaults to `false` when omitted.
+
+The in-process free-turn TCP client is a raw TCP forwarder. For whole-host t2s
+routing, run the remote free-turn server with a TCP `-connect` target that
+speaks SOCKS5.
+If the client discovers TURN/server IPs dynamically, add those routes through
+the original gateway with `interface.custom_routes` to avoid tunnel loops.
+
 ### Tor (via local SOCKS)
 
 ```yaml
@@ -257,3 +286,4 @@ interface:
 - [dnstt](https://dnstt.network/)
 - [gost](https://github.com/go-gost/gost)
 - [chisel](https://github.com/jpillora/chisel)
+- [free-turn-proxy](https://github.com/samosvalishe/free-turn-proxy)
