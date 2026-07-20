@@ -258,7 +258,6 @@ func New(filename string) (*Config, error) {
 	}
 
 	for _, f := range []func() error{
-		_config.prepareFreeTurn,
 		_config.checkProto,
 		_config.checkFreeTurn,
 		_config.prepareResolvers,
@@ -299,16 +298,6 @@ func (c *Config) lookup() error {
 	}
 	if c.Proxy.Type == TypeFreeTurn {
 		c.FreeTurn.IP = net.ResolveIP(net.ToIP(c.FreeTurn.Peer))
-	}
-	return nil
-}
-
-func (c *Config) prepareFreeTurn() error {
-	if c.Proxy.Type != TypeFreeTurn {
-		return nil
-	}
-	if c.FreeTurn.ObfProfile == "" {
-		c.FreeTurn.ObfProfile = "none"
 	}
 	return nil
 }
