@@ -26,7 +26,7 @@ type Dns struct {
 	listen    string
 	resolvers []config.Resolver
 	enable    bool
-	server    *dns.Server
+	servers   []*dns.Server
 	records   map[string]string
 	manager   *manager
 
@@ -129,10 +129,10 @@ func New(
 
 	mux.HandleFunc(".", _dns.resolv)
 
-	_dns.server = &dns.Server{
-		Addr:    fmt.Sprintf("%s:53", _dns.listen),
-		Net:     "udp",
-		Handler: mux,
+	addr := fmt.Sprintf("%s:53", _dns.listen)
+	_dns.servers = []*dns.Server{
+		{Addr: addr, Net: "udp", Handler: mux},
+		{Addr: addr, Net: "tcp", Handler: mux},
 	}
 	return _dns, nil
 }
@@ -142,8 +142,22 @@ func (d *Dns) Run() error {
 		if err := lockf(&d.m, d.manager.Set); err != nil {
 			slog.Warn("set dns error", "error", err)
 		}
-		if err := d.server.ListenAndServe(); err != nil {
-			return fmt.Errorf("failed to start dns server: %w", err)
+
+		errch := make(chan error, len(d.servers))
+		for _, server := range d.servers {
+			go func() {
+				if err := server.ListenAndServe(); err != nil {
+					errch <- fmt.Errorf("failed to start dns %s server: %w", server.Net, err)
+					return
+				}
+				errch <- nil
+			}()
+		}
+
+		for range d.servers {
+			if err := <-errch; err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -154,9 +168,13 @@ func (d *Dns) Stop() error {
 		if err := lockf(&d.m, d.manager.Revert); err != nil {
 			slog.Warn("revert dns error", "error", err)
 		}
-		if err := d.server.Shutdown(); err != nil {
-			return fmt.Errorf("failed to stop dns server: %w", err)
+		var err error
+		for _, server := range d.servers {
+			if _err := server.Shutdown(); _err != nil {
+				err = errors.Join(err, fmt.Errorf("failed to stop dns %s server: %w", server.Net, _err))
+			}
 		}
+		return err
 	}
 	return nil
 }
