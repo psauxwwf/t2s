@@ -108,6 +108,7 @@ type FreeTurn struct {
 type Dns struct {
 	Enable     *bool             `yaml:"enable"`
 	Listen     string            `yaml:"listen"`
+	Search     string            `yaml:"search"`
 	Render     *bool             `yaml:"render"`
 	Resolvectl *bool             `yaml:"resolvectl"`
 	Resolvers  []Resolver        `yaml:"resolvers"`
@@ -193,6 +194,7 @@ var _default = Config{
 	Dns: Dns{
 		Enable:     new(true),
 		Listen:     "127.1.1.53",
+		Search:     "",
 		Render:     new(true),
 		Resolvectl: new(true),
 		Resolvers: []Resolver{

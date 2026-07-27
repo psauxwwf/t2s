@@ -100,6 +100,7 @@ func (d *Dns) resolv(w dns.ResponseWriter, r *dns.Msg) {
 
 func New(
 	_listen string,
+	_search string,
 	_resolvers []config.Resolver,
 	_enable bool,
 	render, resolvectl bool,
@@ -107,6 +108,7 @@ func New(
 ) (*Dns, error) {
 	_manager, err := Manager(
 		_listen,
+		_search,
 		render,
 		resolvectl,
 	)
