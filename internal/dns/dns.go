@@ -100,7 +100,7 @@ func (d *Dns) resolv(w dns.ResponseWriter, r *dns.Msg) {
 
 func New(
 	_listen string,
-	_search string,
+	_search []string,
 	_resolvers []config.Resolver,
 	_enable bool,
 	render, resolvectl bool,

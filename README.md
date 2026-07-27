@@ -88,7 +88,9 @@ socks:
 dns:
   enable: true
   listen: 127.1.1.53
-  search: domain.com
+  search:
+    - domain.com
+    - example.com
   render: true
   resolvectl: true
   resolvers:
@@ -236,7 +238,9 @@ Custom records:
 ```yaml
 dns:
   listen: 127.1.1.53
-  search: domain.com
+  search:
+    - domain.com
+    - example.com
   render: true
   resolvectl: true
   resolvers:
