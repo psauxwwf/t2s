@@ -25,7 +25,8 @@ nameserver %s
 )
 
 type manager struct {
-	listen, search    string
+	listen            string
+	search            []string
 	render, resolvect bool
 	link              string
 	currentconf       []byte
@@ -33,12 +34,12 @@ type manager struct {
 
 func Manager(
 	_listen string,
-	_search string,
+	_search []string,
 	_render, _resolvectl bool,
 ) (*manager, error) {
 	_manager := &manager{
 		listen:    _listen,
-		search:    strings.TrimSpace(_search),
+		search:    normalizeSearch(_search),
 		render:    _render,
 		resolvect: _resolvectl,
 	}
@@ -78,9 +79,10 @@ func (m *manager) Set() error {
 					if _, err := shell.New("resolvectl", "dns", i, m.listen).Run(); err != nil {
 						return fmt.Errorf("failed to set dns %s for %s: %w", m.listen, i, err)
 					}
-					if m.search != "" {
-						if _, err := shell.New("resolvectl", "domain", i, m.search).Run(); err != nil {
-							return fmt.Errorf("failed to set search domain %s for %s: %w", m.search, i, err)
+					if len(m.search) > 0 {
+						args := append([]string{"domain", i}, m.search...)
+						if _, err := shell.New("resolvectl", args...).Run(); err != nil {
+							return fmt.Errorf("failed to set search domains %s for %s: %w", strings.Join(m.search, " "), i, err)
 						}
 					}
 				}
@@ -145,15 +147,25 @@ func (m *manager) Repair() error {
 	)
 }
 
-func render(path, listen, search string) error {
+func render(path, listen string, search []string) error {
 	data := fmt.Appendf(nil, resolvconf, listen)
-	if search != "" {
-		data = fmt.Appendf(data, "search %s\n", search)
+	if len(search) > 0 {
+		data = fmt.Appendf(data, "search %s\n", strings.Join(search, " "))
 	}
 	if err := fs.WriteFile(path, data); err != nil {
 		return fmt.Errorf("failed to render: %w", err)
 	}
 	return nil
+}
+
+func normalizeSearch(search []string) []string {
+	var normalized []string
+	for _, domain := range search {
+		if domain = strings.TrimSpace(domain); domain != "" {
+			normalized = append(normalized, domain)
+		}
+	}
+	return normalized
 }
 
 func (m *manager) getInterfaces() (interfaces []string) {
