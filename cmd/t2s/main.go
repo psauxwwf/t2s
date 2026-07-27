@@ -381,6 +381,7 @@ func run(path string, timeout int, repair bool) error {
 
 	_dns, err := dns.New(
 		_config.Dns.Listen,
+		_config.Dns.Search,
 		_config.Dns.Resolvers,
 		*_config.Dns.Enable,
 		*_config.Dns.Render,

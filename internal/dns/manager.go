@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 
 	"t2s/pkg/fs"
 	"t2s/pkg/shell"
@@ -24,7 +25,7 @@ nameserver %s
 )
 
 type manager struct {
-	listen            string
+	listen, search    string
 	render, resolvect bool
 	link              string
 	currentconf       []byte
@@ -32,10 +33,12 @@ type manager struct {
 
 func Manager(
 	_listen string,
+	_search string,
 	_render, _resolvectl bool,
 ) (*manager, error) {
 	_manager := &manager{
 		listen:    _listen,
+		search:    strings.TrimSpace(_search),
 		render:    _render,
 		resolvect: _resolvectl,
 	}
@@ -63,7 +66,7 @@ func (m *manager) Set() error {
 						return fmt.Errorf("failed to unlink %s: %w", respath, err)
 					}
 				}
-				if err := render(respath, resolvconf, m.listen); err != nil {
+				if err := render(respath, m.listen, m.search); err != nil {
 					return fmt.Errorf("resolvconf error: %w", err)
 				}
 			}
@@ -74,6 +77,11 @@ func (m *manager) Set() error {
 				for _, i := range m.getInterfaces() {
 					if _, err := shell.New("resolvectl", "dns", i, m.listen).Run(); err != nil {
 						return fmt.Errorf("failed to set dns %s for %s: %w", m.listen, i, err)
+					}
+					if m.search != "" {
+						if _, err := shell.New("resolvectl", "domain", i, m.search).Run(); err != nil {
+							return fmt.Errorf("failed to set search domain %s for %s: %w", m.search, i, err)
+						}
 					}
 				}
 			}
@@ -137,8 +145,12 @@ func (m *manager) Repair() error {
 	)
 }
 
-func render(path, format, a string) error {
-	if err := fs.WriteFile(path, fmt.Appendf(nil, format, a)); err != nil {
+func render(path, listen, search string) error {
+	data := fmt.Appendf(nil, resolvconf, listen)
+	if search != "" {
+		data = fmt.Appendf(data, "search %s\n", search)
+	}
+	if err := fs.WriteFile(path, data); err != nil {
 		return fmt.Errorf("failed to render: %w", err)
 	}
 	return nil
