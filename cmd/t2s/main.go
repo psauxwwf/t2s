@@ -27,8 +27,8 @@ const (
 	serviceName = "t2s"
 	unit        = `[Unit]
 Description=t2s tunnel service
-After=network-online.target
-Wants=network-online.target
+Wants=network-online.target systemd-resolved.service
+After=systemd-resolved.service network-online.target multi-user.target
 
 [Service]
 Type=simple
