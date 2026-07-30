@@ -105,7 +105,8 @@ func (t *Tun2socksme) Run(sigch chan os.Signal, timeout time.Duration) error {
 	case err := <-errch:
 		return fmt.Errorf("fatal error: %s", err)
 	case sig := <-sigch:
-		return fmt.Errorf("recieve: %v", sig)
+		slog.Info("received signal", "signal", sig)
+		return nil
 	}
 }
 
@@ -172,6 +173,9 @@ func (t *Tun2socksme) customRouteFunc(action string) error {
 				strings.Fields(strings.TrimSpace(route))...,
 			)...,
 		).Run(); err != nil {
+			if action == "del" && isRouteMissing(err) {
+				continue
+			}
 			return fmt.Errorf("failed to %s override route %s: %w", action, t.routes, err)
 		}
 	}
@@ -203,6 +207,9 @@ func (t *Tun2socksme) deleteRoutes() error {
 	var err error
 	for _, net := range t.exclude {
 		if _, _err := shell.New("ip", "ro", "del", net).Run(); _err != nil {
+			if isRouteMissing(_err) {
+				continue
+			}
 			err = fmt.Errorf("failed to delete route %s: %w", net, _err)
 		}
 	}
@@ -216,9 +223,16 @@ func (t *Tun2socksme) deleteRoutes() error {
 		return nil
 	}
 	if _, _err := shell.New("ip", "ro", "del", t.tun.Host()).Run(); _err != nil {
+		if isRouteMissing(_err) {
+			return err
+		}
 		err = fmt.Errorf("failed to delete route %s: %w", t.tun.Host(), _err)
 	}
 	return err
+}
+
+func isRouteMissing(err error) bool {
+	return strings.Contains(err.Error(), "No such process")
 }
 
 func (t *Tun2socksme) disableRP() error {

@@ -37,16 +37,40 @@ func getIpro(metricDefault int) (*Ipro, error) {
 		return nil, fmt.Errorf("default gateway line is too short")
 	}
 	_metric, _metricExists := getMetric(_s, metricDefault)
+	_defgate, err := getDefaultGateway(_s)
+	if err != nil {
+		return nil, err
+	}
 	return &Ipro{
 		iprosh:       _iprosh,
 		s:            _s,
 		metric:       _metric,
 		metricExists: _metricExists,
-		defgate: Gateway{
-			address: _s[2],
-			device:  _s[4],
-		},
+		defgate:      _defgate,
 	}, nil
+}
+
+func getDefaultGateway(s []string) (Gateway, error) {
+	var g Gateway
+	for i, entry := range s {
+		switch entry {
+		case "via":
+			if i+1 < len(s) {
+				g.address = s[i+1]
+			}
+		case "dev":
+			if i+1 < len(s) {
+				g.device = s[i+1]
+			}
+		}
+	}
+	if g.address == "" {
+		return g, fmt.Errorf("default gateway address not found in %q", strings.Join(s, " "))
+	}
+	if g.device == "" {
+		return g, fmt.Errorf("default gateway device not found in %q", strings.Join(s, " "))
+	}
+	return g, nil
 }
 
 func getMetric(s []string, metric int) (int, bool) {
