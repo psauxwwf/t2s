@@ -117,7 +117,7 @@ func (m *manager) Revert() error {
 						return fmt.Errorf("failed to revert dns for %s: %w", i, err)
 					}
 				}
-				if _, err := shell.New("systemctl", "restart", "systemd-resolved").Run(); err != nil {
+				if _, err := shell.New("systemctl", "--no-block", "restart", "systemd-resolved").Run(); err != nil {
 					return fmt.Errorf("failed to restart dns: %w", err)
 				}
 			}

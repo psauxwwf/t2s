@@ -1,6 +1,7 @@
 package dns
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -8,6 +9,7 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"time"
 
 	"t2s/internal/config"
 
@@ -15,6 +17,8 @@ import (
 )
 
 var ErrResolveFailed = errors.New("failed to resolve")
+
+const dnsShutdownTimeout = 3 * time.Second
 
 func lockf(m *sync.Mutex, f func() error) error {
 	m.Lock()
@@ -167,18 +171,25 @@ func (d *Dns) Run() error {
 
 func (d *Dns) Stop() error {
 	if d.enable {
-		if err := lockf(&d.m, d.manager.Revert); err != nil {
-			slog.Warn("revert dns error", "error", err)
-		}
 		var err error
 		for _, server := range d.servers {
-			if _err := server.Shutdown(); _err != nil {
+			ctx, cancel := context.WithTimeout(context.Background(), dnsShutdownTimeout)
+			_err := server.ShutdownContext(ctx)
+			cancel()
+			if _err != nil && !isServerNotStarted(_err) {
 				err = errors.Join(err, fmt.Errorf("failed to stop dns %s server: %w", server.Net, _err))
 			}
+		}
+		if _err := lockf(&d.m, d.manager.Revert); _err != nil {
+			slog.Warn("revert dns error", "error", _err)
 		}
 		return err
 	}
 	return nil
+}
+
+func isServerNotStarted(err error) bool {
+	return strings.Contains(err.Error(), "server not started")
 }
 
 func (d *Dns) Repair() error {
