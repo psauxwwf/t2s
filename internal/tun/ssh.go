@@ -2,6 +2,7 @@ package tun
 
 import (
 	"fmt"
+	"strings"
 
 	"t2s/internal/config"
 
@@ -46,11 +47,23 @@ func (s *ssh) Run() chan error {
 	var errch = s.Tun.Run()
 	go func() {
 		if _, err := shell.New("ssh", s.sshOpts()...).Run(); err != nil {
+			if isRetryableSSHError(err) {
+				errch <- fmt.Errorf("ssh network error: %w", err)
+				return
+			}
 			errch <- fmt.Errorf("ssh error: %w", err)
 			return
 		}
 	}()
 	return errch
+}
+
+func isRetryableSSHError(err error) bool {
+	msg := err.Error()
+	return strings.Contains(msg, "No route to host") ||
+		strings.Contains(msg, "Network is unreachable") ||
+		strings.Contains(msg, "Connection timed out") ||
+		strings.Contains(msg, "Temporary failure in name resolution")
 }
 
 func (s *ssh) sshOpts() []string {
