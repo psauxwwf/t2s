@@ -2,64 +2,57 @@
 # yaml-language-server: $schema=https://taskfile.dev/schema.json
 version: "3"
 
+dotenv: ["build.env"]
+
 vars:
-  gobin: go
-  ldflags: "-extldflags '-static' -w -s -buildid="
-  gcflags: "all=-trimpath={{.PWD}} -dwarf=false -l"
-  asmflags: "all=-trimpath={{.PWD}}"
-  bin: "{{.PWD}}/bin"
-  app: "t2s"
-  app_bin: "{{.bin}}/{{.app}}"
-  release_linux_archive: "{{.bin}}/{{.app}}_linux_amd64.tar.gz"
+  GOBIN: go
+  LDFLAGS: "-extldflags '-static' -w -s -buildid="
+  GCFLAGS: "all=-dwarf=false -l"
+  BIN: "{{.ROOT_DIR}}/bin"
+  APP: t2s
+  APP_BIN: "{{.BIN}}/{{.APP}}"
+  REPO_NAME:
+    sh: basename "{{.ROOT_DIR}}"
+  RELEASE_LINUX_ARCHIVE: "{{.BIN}}/{{.REPO_NAME}}_linux_amd64.tar.gz"
 
 env:
-  CGO_ENABLED: 0
+  CGO_ENABLED: "0"
   GOARCH: amd64
   GOOS: linux
 
 tasks:
   setup:
-    desc: set up the environment
+    desc: Set up the build directory
     internal: true
     silent: true
     cmds:
-      - mkdir -p {{.bin}}
+      - mkdir -p "{{.BIN}}"
 
   build:
-    desc: common build
-    deps:
-      - build:linux
-
-  build:linux:
-    desc: build for linux amd64
-    deps:
-      - setup
-    silent: true
+    desc: Build the static Linux amd64 binary
+    dir: "{{.ROOT_DIR}}"
+    deps: [setup]
     cmds:
       - >
-        VERSION="{{.VERSION}}"; [ -n "$VERSION" ] || VERSION=dev;
-        {{.gobin}} build
+        {{.GOBIN}} build
         -tags netgo
-        -ldflags="{{.ldflags}} -X main.version=$VERSION" 
-        -trimpath 
-        -gcflags="{{.gcflags}}" 
-        -asmflags="{{.asmflags}}" 
-        -o {{.app_bin}} cmd/{{.app}}/main.go
-      - strip {{.app_bin}}
-      - objcopy --strip-unneeded {{.app_bin}}
+        -ldflags="{{.LDFLAGS}}"
+        -trimpath
+        -gcflags="{{.GCFLAGS}}"
+        -o "{{.APP_BIN}}"
+        ./cmd/{{.APP}}
+      - strip "{{.APP_BIN}}"
+      - objcopy --strip-unneeded "{{.APP_BIN}}"
 
   release:
-    desc: build and publish github release
-    vars:
-      TAG:
-        sh: printf 'v%s' "$(date +%m.%d.%H)"
-    silent: false
+    desc: Build and publish a GitHub release
+    dir: "{{.ROOT_DIR}}"
+    deps: [build]
     cmds:
-      - task: build
-        vars:
-          VERSION: "{{.TAG}}"
-      - tar -czf {{.release_linux_archive}} -C {{.bin}} {{.app}}
-      - gh release create "{{.TAG}}" {{.release_linux_archive}}
+      - tar -czf "{{.RELEASE_LINUX_ARCHIVE}}" -C "{{.BIN}}" "{{.APP}}"
+      - |
+        TAG=$(date +v%m.%d.%H)
+        gh release create "$TAG" "{{.RELEASE_LINUX_ARCHIVE}}"
 
   build:docker:dnstt:
     desc: build docker dnstt server image

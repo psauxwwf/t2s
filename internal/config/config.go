@@ -21,11 +21,10 @@ const (
 )
 
 const (
-	TypeSocks    = "socks"
-	TypeSsh      = "ssh"
-	TypeChisel   = "chisel"
-	TypeDnstt    = "dnstt"
-	TypeFreeTurn = "freeturn"
+	TypeSocks  = "socks"
+	TypeSsh    = "ssh"
+	TypeChisel = "chisel"
+	TypeDnstt  = "dnstt"
 )
 
 const (
@@ -40,8 +39,6 @@ var (
 	)
 	ErrNotExists = fmt.Errorf("config not found: %w", os.ErrNotExist)
 )
-
-var freeTurnProfiles = []string{"none", "rtpopus", "rtpopus2", "rtpopus3"}
 
 func protoContains(proto string) bool {
 	return slices.Contains([]string{
@@ -96,15 +93,6 @@ type Dnstt struct {
 	IP       string `yaml:"-"`
 }
 
-type FreeTurn struct {
-	Peer          string   `yaml:"peer"`
-	Links         []string `yaml:"links"`
-	ObfProfile    string   `yaml:"obf_profile"`
-	ObfKey        string   `yaml:"obf_key"`
-	ManualCaptcha bool     `yaml:"manual_captcha"`
-	IP            string   `yaml:"-"`
-}
-
 type Dns struct {
 	Enable     *bool             `yaml:"enable"`
 	Listen     string            `yaml:"listen"`
@@ -130,7 +118,6 @@ type Config struct {
 	Ssh       Ssh       `yaml:"ssh"`
 	Chisel    Chisel    `yaml:"chisel"`
 	Dnstt     Dnstt     `yaml:"dnstt"`
-	FreeTurn  FreeTurn  `yaml:"freeturn"`
 	Dns       Dns       `yaml:"dns"`
 
 	RelayPort int `yaml:"-"`
@@ -183,13 +170,6 @@ var _default = Config{
 		Domain:   "t.domain.xyz",
 		Username: "username",
 		Password: "password",
-	},
-	FreeTurn: FreeTurn{
-		Peer:          "203.0.113.10:56002",
-		Links:         []string{"https://vk.ru/call/join/example-1", "https://vk.ru/call/join/example-2"},
-		ObfProfile:    "rtpopus",
-		ObfKey:        "61caefa65c98d428b426d40c75251d77d96a46c2c8962284168704ba37ef6ef5",
-		ManualCaptcha: false,
 	},
 	Dns: Dns{
 		Enable:     new(true),
@@ -261,7 +241,6 @@ func New(filename string) (*Config, error) {
 
 	for _, f := range []func() error{
 		_config.checkProto,
-		_config.checkFreeTurn,
 		_config.prepareResolvers,
 		_config.lookup,
 	} {
@@ -298,33 +277,12 @@ func (c *Config) lookup() error {
 			c.Dnstt.IP = net.ToIP(c.Dnstt.Resolver)
 		}
 	}
-	if c.Proxy.Type == TypeFreeTurn {
-		c.FreeTurn.IP = net.ResolveIP(net.ToIP(c.FreeTurn.Peer))
-	}
 	return nil
 }
 
 func (c *Config) checkProto() error {
 	if !protoContains(c.Socks.Proto) {
 		return ErrProtoConains
-	}
-	return nil
-}
-
-func (c *Config) checkFreeTurn() error {
-	if c.Proxy.Type != TypeFreeTurn {
-		return nil
-	}
-	if len(c.FreeTurn.Links) == 0 {
-		return fmt.Errorf("freeturn links must not be empty")
-	}
-	if !slices.Contains(freeTurnProfiles, c.FreeTurn.ObfProfile) {
-		return fmt.Errorf("freeturn obf_profile must be one of %v", freeTurnProfiles)
-	}
-	if c.FreeTurn.ObfProfile != "none" {
-		if ok, err := regexp.MatchString(`^[0-9a-fA-F]{64}$`, c.FreeTurn.ObfKey); err != nil || !ok {
-			return fmt.Errorf("freeturn obf_key must be 64 hex characters when obfuscation is enabled")
-		}
 	}
 	return nil
 }
