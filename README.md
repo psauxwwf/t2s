@@ -259,7 +259,7 @@ interface:
 
 ## References
 
-- [Proxy models for tun2socks](https://github.com/xjasonlyu/tun2socks/wiki/Proxy-Models)
+- [proxy models for tun2socks](https://github.com/xjasonlyu/tun2socks/wiki/Proxy-Models)
 - [dnstt](https://dnstt.network/)
 - [gost](https://github.com/go-gost/gost)
 - [chisel](https://github.com/jpillora/chisel)
